@@ -24,9 +24,10 @@ class DeepTabularChurnPipeline:
         try:
             base_dir = os.path.dirname(__file__)
             # Load the preprocessing pipeline matching the tabular structure
-            self.encoder = joblib.load(os.path.join(base_dir, 'churn_encoder.pkl'))
-            self.scaler = joblib.load(os.path.join(base_dir, 'churn_scaler.pkl'))
-            self.model = joblib.load(os.path.join(base_dir, 'churn_model.pkl'))
+            artifacts = joblib.load(os.path.join(base_dir, 'churn_model.pkl'))
+            self.encoder = artifacts['encoders']
+            self.scaler = artifacts['scaler']
+            self.model = artifacts['model']
             self.is_loaded = True
             print("Loaded Tabular Base Weights for Churn DL Module.")
         except Exception as e:

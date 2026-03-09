@@ -121,9 +121,11 @@ def render_eda():
     @st.cache_data
     def load_eda_data():
         try:
-            df = pd.read_csv("data/archive_2/netflix_customer_churn.csv")
+            import joblib
+            df = joblib.load("models/churn_eda_sample.pkl")
             return df
-        except Exception:
+        except Exception as e:
+            st.error(f"Cannot load EDA sample: {e}. Please run `scripts/train_models.py` first.")
             return None
             
     df = load_eda_data()

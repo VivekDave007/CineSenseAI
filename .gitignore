@@ -22,10 +22,7 @@ data/archive_5/*
 !data/archive_4/.gitkeep
 !data/archive_5/.gitkeep
 
-# Ignore compressed models (too large for GitHub)
-models/*.pkl
-models/*.keras
-models/*.json
+# Models are small enough to be tracked by GitHub (under 100MB)
 !models/.gitkeep
 
 # Ignore root zip archives

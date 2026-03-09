@@ -21,10 +21,10 @@ class DeepSentimentNLPPipeline:
     def load_models(self):
         try:
             # We load the existing Logistic Regression model to act as our 
-            # "base layer" feature extractor.
             base_dir = os.path.dirname(__file__)
-            self.vectorizer = joblib.load(os.path.join(base_dir, 'tfidf_vectorizer.pkl'))
-            self.model = joblib.load(os.path.join(base_dir, 'sentiment_model.pkl'))
+            artifacts = joblib.load(os.path.join(base_dir, 'nlp_model.pkl'))
+            self.vectorizer = artifacts['vectorizer']
+            self.model = artifacts['model']
             self.is_loaded = True
             print("Loaded Base Weights for NLP Deep Learning Module.")
         except Exception as e:

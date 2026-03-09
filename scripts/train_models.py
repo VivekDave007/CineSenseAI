@@ -24,6 +24,14 @@ def extract_and_save_models():
             'encoders': churn_model.label_encoders,
             'features': churn_model.features
         }, '../models/churn_model.pkl')
+        
+        # Save a small 2,000 row sample of the DataFrame for the EDA dashboard
+        # This prevents Streamlit from needing the massive raw CSV online
+        import pandas as pd
+        raw_df = pd.read_csv("../data/archive_2/netflix_customer_churn.csv")
+        sample_df = raw_df.sample(min(2000, len(raw_df)), random_state=42)
+        joblib.dump(sample_df, '../models/churn_eda_sample.pkl')
+        
         print("Churn Model serialized to models/churn_model.pkl")
     else:
         print("Failed to train Churn Model.")
