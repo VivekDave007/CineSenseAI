@@ -65,15 +65,26 @@ class DeepTabularChurnPipeline:
             enc_sub = 0
             enc_dev = 0
             
-        # Build the exact vector for the scaler
-        vector = np.array([[
-            age, enc_sub, watch_hours, last_login, enc_dev, cost, profiles, avg_watch
-        ]])
+        # Build the exact feature dictionary expected by the XGBoost backend
+        user_vector = {
+            'age': age,
+            'subscription_type': enc_sub,
+            'watch_hours': watch_hours,
+            'last_login_days': last_login,
+            'device': enc_dev,
+            'monthly_fee': cost,
+            'number_of_profiles': profiles,
+            'avg_watch_time_per_day': avg_watch
+        }
         
-        X_scaled = self.scaler.transform(vector)
+        input_df = pd.DataFrame([user_vector])
+        
+        # The scaler only expects the 6 numerical columns
+        numerical_cols = ['age', 'watch_hours', 'last_login_days', 'monthly_fee', 'number_of_profiles', 'avg_watch_time_per_day']
+        input_df[numerical_cols] = self.scaler.transform(input_df[numerical_cols])
         
         # Extract base probability from the trained Gradient Boosting tree
-        base_probs = self.model.predict_proba(X_scaled)[0]
+        base_probs = self.model.predict_proba(input_df)[0]
         churn_prob = base_probs[1]
         
         # Determine Top Factors based on standard decision thresholds

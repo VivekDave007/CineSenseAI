@@ -438,7 +438,7 @@ def render_churn():
                 
                 with col_score:
                     st.metric("Cancellation Probability", f"{risk_score:.1f}%")
-                    st.progress(risk_score / 100.0)
+                    st.progress(float(risk_score / 100.0))
                 
                 with col_action:
                     if risk_score > 60:
@@ -579,7 +579,7 @@ def render_vision():
                 else:
                     st.success(f"**Stable Subscriber Profile** ({100 - churn_prob:.2f}% Retention Confidence)")
                     
-                st.progress(min(churn_prob / 100.0, 1.0))
+                st.progress(float(min(churn_prob / 100.0, 1.0)))
                 st.info(f"**Vector Extraction Highlights:** {', '.join(top_factors)}")
 
 if __name__ == "__main__":
