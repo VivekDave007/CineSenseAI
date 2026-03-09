@@ -133,3 +133,46 @@ class MovieRecommender:
             return results
         except Exception as e:
             return [{"title": self.clean_title(m[0]), "genre": m[1], "reason": "Globally popular content"} for m in self.popular_movies[:num_recommendations]]
+
+    def get_recommendations_by_genre(self, genre, num_recommendations=5):
+        """Given a genre string, return top N highest-rated movies in that genre using SVD predicted scores."""
+        if not self.is_loaded:
+            success = self.load_pretrained()
+            if not success: return []
+            
+        try:
+            # Filter movies that contain the requested genre
+            genre_movies = self.movies[self.movies['genre'].str.contains(genre, case=False, na=False)]
+            
+            if genre_movies.empty:
+                return []
+            
+            # Calculate the average predicted rating across ALL users for each movie
+            all_preds = np.dot(self.matrix_factorization, self.svd_components) + self.user_ratings_mean.reshape(-1, 1)
+            avg_preds = np.mean(all_preds, axis=0)
+            
+            # Map movie_ids to their average predicted score
+            movie_scores = {}
+            for i, m_id in enumerate(self.movie_ids):
+                movie_scores[m_id] = avg_preds[i]
+            
+            # Score and rank the genre-filtered movies
+            scored_movies = []
+            for _, row in genre_movies.iterrows():
+                m_id = row['movie_id']
+                score = movie_scores.get(m_id, 0)
+                scored_movies.append((row, score))
+            
+            scored_movies.sort(key=lambda x: x[1], reverse=True)
+            
+            results = []
+            for row, score in scored_movies[:num_recommendations]:
+                results.append({
+                    "title": self.clean_title(row['title']),
+                    "genre": row['genre'],
+                    "reason": f"Top-rated {genre} movie by collaborative analysis"
+                })
+            return results
+        except Exception as e:
+            print(f"Genre recommendation error: {e}")
+            return [{"title": self.clean_title(m[0]), "genre": m[1], "reason": "Globally popular content"} for m in self.popular_movies[:num_recommendations]]

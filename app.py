@@ -235,78 +235,58 @@ def render_eda():
 
 def render_recommender():
     st.title("Movie Recommendations")
-    st.info("Get personalized movie suggestions tailored to your taste.")
+    st.info("Select your favorite genre to get the top-rated movie suggestions powered by Matrix Factorization (SVD).")
     
-    # Initialize chat history
-    if "rec_messages" not in st.session_state:
-        st.session_state.rec_messages = []
-        st.session_state.rec_messages.append({"role": "assistant", "content": "Hello! I am your AI Movie Recommender. Please enter your User ID (e.g. 1042) to get personalized suggestions."})
-
-    # Display chat
-    for message in st.session_state.rec_messages:
-        with st.chat_message(message["role"]):
-            if message["role"] == "user":
-                st.markdown(message["content"])
+    from models.recommender import MovieRecommender
+    
+    @st.cache_resource
+    def load_model():
+        rec = MovieRecommender()
+        rec.load_pretrained()
+        return rec
+    
+    rec_model = load_model()
+    
+    # Genre selection input
+    available_genres = [
+        "Action", "Adventure", "Animation", "Children's", "Comedy", 
+        "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir",
+        "Horror", "Musical", "Mystery", "Romance", "Sci-Fi", 
+        "Thriller", "War", "Western"
+    ]
+    
+    col_input, col_count = st.columns([2, 1])
+    with col_input:
+        selected_genre = st.selectbox("Choose a Genre:", available_genres, index=4)  # Default: Comedy
+    with col_count:
+        num_recs = st.slider("Number of Recommendations:", 3, 10, 5)
+    
+    if st.button("Get Recommendations", type="primary"):
+        with st.spinner(f"Finding the best {selected_genre} movies using SVD Latent Factors..."):
+            recs = rec_model.get_recommendations_by_genre(selected_genre, num_recommendations=num_recs)
+            
+            if not recs:
+                st.error(f"No movies found for genre: {selected_genre}")
             else:
-                if isinstance(message["content"], dict) and "recs" in message["content"]:
-                    user_id = message["content"]["user_id"]
-                    recs = message["content"]["recs"]
-                    if not recs:
-                        st.error("Could not find this user.")
-                    else:
-                        st.success(f"We found 5 perfect movies for User #{user_id}!")
-                        cols = st.columns(len(recs))
-                        for idx, (col, r) in enumerate(zip(cols, recs)):
-                            with col:
-                                st.markdown(f'''
-                                <div style="background-color:rgba(128,128,128,0.1); padding:0.8rem; border-radius:10px; min-height:160px; text-align:center; display:flex; flex-direction:column; justify-content:center; overflow:hidden;">
-                                    <h4 style="margin:0 0 4px 0; color:#1E88E5;">#{idx+1}</h4>
-                                    <p style="font-weight:bold; margin:0 0 4px 0; font-size:0.85rem; line-height:1.2;">{r['title']}</p>
-                                    <p style="font-size:0.75rem; opacity:0.7; margin:0 0 4px 0;">{r['genre'].replace("|", ", ")}</p>
-                                </div>
-                                ''', unsafe_allow_html=True)
-                else:
-                    st.markdown(message["content"])
-
-    if prompt := st.chat_input("Enter User ID (1 - 6040)..."):
-        st.chat_message("user").markdown(prompt)
-        st.session_state.rec_messages.append({"role": "user", "content": prompt})
-        
-        with st.chat_message("assistant"):
-            with st.spinner("Finding the best movies..."):
-                try:
-                    user_id = int(prompt)
-                    from models.recommender import MovieRecommender
-                    
-                    @st.cache_resource
-                    def load_model():
-                        rec = MovieRecommender()
-                        rec.load_pretrained()
-                        return rec
-                    
-                    rec_model = load_model()
-                    recs = rec_model.get_recommendations(user_id, num_recommendations=5)
-                    
-                    if not recs:
-                        st.error("Could not generate recommendations.")
-                        st.session_state.rec_messages.append({"role": "assistant", "content": {"recs": [], "user_id": user_id}})
-                    else:
-                        st.success(f"We found 5 perfect movies for User #{user_id}!")
-                        cols = st.columns(len(recs))
-                        for idx, (col, r) in enumerate(zip(cols, recs)):
-                            with col:
-                                st.markdown(f'''
-                                <div style="background-color:rgba(128,128,128,0.1); padding:0.8rem; border-radius:10px; min-height:160px; text-align:center; display:flex; flex-direction:column; justify-content:center; overflow:hidden;">
-                                    <h4 style="margin:0 0 4px 0; color:#1E88E5;">#{idx+1}</h4>
-                                    <p style="font-weight:bold; margin:0 0 4px 0; font-size:0.85rem; line-height:1.2;">{r['title']}</p>
-                                    <p style="font-size:0.75rem; opacity:0.7; margin:0 0 4px 0;">{r['genre'].replace("|", ", ")}</p>
-                                </div>
-                                ''', unsafe_allow_html=True)
-                        st.session_state.rec_messages.append({"role": "assistant", "content": {"recs": recs, "user_id": user_id}})
-
-                except ValueError:
-                    st.error("Please enter a valid numeric User ID.")
-                    st.session_state.rec_messages.append({"role": "assistant", "content": "Please enter a valid numeric User ID."})
+                st.success(f"Top {len(recs)} {selected_genre} Movies (Ranked by Collaborative Filtering)")
+                
+                cols = st.columns(min(len(recs), 5))
+                for idx, (col, r) in enumerate(zip(cols, recs[:5])):
+                    with col:
+                        st.markdown(f'''
+                        <div style="background-color:rgba(128,128,128,0.1); padding:0.8rem; border-radius:10px; min-height:180px; text-align:center; display:flex; flex-direction:column; justify-content:center; overflow:hidden;">
+                            <h4 style="margin:0 0 4px 0; color:#1E88E5;">#{idx+1}</h4>
+                            <p style="font-weight:bold; margin:0 0 4px 0; font-size:0.85rem; line-height:1.2;">{r['title']}</p>
+                            <p style="font-size:0.75rem; opacity:0.7; margin:0 0 4px 0;">{r['genre'].replace("|", ", ")}</p>
+                            <p style="font-size:0.65rem; opacity:0.5; margin:0; font-style:italic;">{r['reason']}</p>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                
+                # Show remaining recommendations (if more than 5)
+                if len(recs) > 5:
+                    st.markdown("---")
+                    for idx, r in enumerate(recs[5:], start=6):
+                        st.write(f"**#{idx}. {r['title']}** - {r['genre'].replace('|', ', ')} - _{r['reason']}_")
 
 def render_nlp():
     st.title("Sentiment Volatility Analysis")
