@@ -240,12 +240,12 @@ def render_recommender():
     from models.recommender import MovieRecommender
     
     @st.cache_resource
-    def load_model():
+    def load_recommender_model():
         rec = MovieRecommender()
         rec.load_pretrained()
         return rec
     
-    rec_model = load_model()
+    rec_model = load_recommender_model()
     
     # --- 3-Column Filter Layout ---
     col_genre, col_decade, col_mood = st.columns(3)
