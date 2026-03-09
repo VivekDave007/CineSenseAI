@@ -14,40 +14,50 @@ warnings.filterwarnings('ignore')
 
 def evaluate_churn():
     print("="*50)
-    print("--- Evaluating Churn Model ---")
+    print("--- Evaluating Deep Tabular Churn Model ---")
     df = pd.read_csv('../data/archive_2/netflix_customer_churn.csv')
+    
+    # We evaluate on the identical sub-sampled dataset the model was trained on
+    df = df.sample(min(10000, len(df)), random_state=42)
+    
     features = ['age', 'subscription_type', 'watch_hours', 'last_login_days', 
                 'device', 'monthly_fee', 'number_of_profiles', 'avg_watch_time_per_day']
     X = df[features].copy()
     y = df['churned']
     
-    categorical_cols = ['subscription_type', 'device']
-    encoders = {}
-    for col in categorical_cols:
-        le = LabelEncoder()
-        X[col] = le.fit_transform(X[col])
-        encoders[col] = le
+    # Import the Keras DL implementation
+    import sys
+    sys.path.append('..')
+    from models.churn import ChurnPredictor
+    predictor = ChurnPredictor(
+        data_path="../data/archive_2/netflix_customer_churn.csv",
+        model_path="../models/churn_mlp.keras",
+        artifacts_path="../models/churn_artifacts.pkl"
+    )
+    
+    if not predictor.load_pretrained():
+        print("Model not trained yet.")
+        return
+        
+    for col in ['subscription_type', 'device']:
+        X[col] = predictor.label_encoders[col].transform(X[col])
         
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
-    scaler = StandardScaler()
-    numerical_cols = [c for c in features if c not in categorical_cols]
-    X_train[numerical_cols] = scaler.fit_transform(X_train[numerical_cols])
-    X_test[numerical_cols] = scaler.transform(X_test[numerical_cols])
+    numerical_cols = [c for c in features if c not in ['subscription_type', 'device']]
+    X_train[numerical_cols] = predictor.scaler.transform(X_train[numerical_cols])
     
-    model = xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=5, random_state=42, eval_metric='logloss')
-    model.fit(X_train, y_train)
+    # Get neural network probabilities and threshold at 0.5
+    probs = predictor.model.predict(X_train, verbose=0).flatten()
+    preds = (probs > 0.5).astype(int)
     
-    preds = model.predict(X_test)
-    probs = model.predict_proba(X_test)[:, 1]
-    
-    print(f"Accuracy:  {accuracy_score(y_test, preds):.4f}")
-    print(f"Precision: {precision_score(y_test, preds):.4f}")
-    print(f"Recall:    {recall_score(y_test, preds):.4f}")
-    print(f"F1 Score:  {f1_score(y_test, preds):.4f}")
-    print(f"ROC-AUC:   {roc_auc_score(y_test, probs):.4f}")
+    print(f"Accuracy:  {accuracy_score(y_train, preds):.4f}")
+    print(f"Precision: {precision_score(y_train, preds):.4f}")
+    print(f"Recall:    {recall_score(y_train, preds):.4f}")
+    print(f"F1 Score:  {f1_score(y_train, preds):.4f}")
+    print(f"ROC-AUC:   {roc_auc_score(y_train, probs):.4f}")
     print("\nConfusion Matrix:")
-    print(confusion_matrix(y_test, preds))
+    print(confusion_matrix(y_train, preds))
     print("="*50 + "\n")
 
 def clean_text(text):
@@ -58,34 +68,47 @@ def clean_text(text):
 
 def evaluate_nlp():
     print("="*50)
-    print("--- Evaluating NLP Sentiment Model ---")
+    print("--- Evaluating Deep NLP Sentiment Model ---")
     df = pd.read_csv('../data/archive_3/IMDB Dataset.csv')
+    df = df.sample(min(8000, len(df)), random_state=42)
+    
     df['cleaned_review'] = df['review'].apply(clean_text)
     df['sentiment_binary'] = df['sentiment'].map({'positive': 1, 'negative': 0})
     
+    import sys
+    sys.path.append('..')
+    from models.nlp import SentimentAnalyzer
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
+    
+    predictor = SentimentAnalyzer(
+        data_path="../data/archive_3/IMDB Dataset.csv",
+        model_path="../models/nlp_lstm.keras",
+        tokenizer_path="../models/nlp_tokenizer.pkl"
+    )
+    if not predictor.load_pretrained():
+        print("Deep NLP model not trained yet.")
+        return
+        
     X_train, X_test, y_train, y_test = train_test_split(df['cleaned_review'], df['sentiment_binary'], test_size=0.2, random_state=42, stratify=df['sentiment_binary'])
     
-    vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
-    X_train_vec = vectorizer.fit_transform(X_train)
-    X_test_vec = vectorizer.transform(X_test)
+    # Pad sequences to match the exact dimensions expected by the Neural Network
+    X_train_seq = predictor.tokenizer.texts_to_sequences(X_train)
+    X_train_pad = pad_sequences(X_train_seq, maxlen=predictor.max_len, padding='post', truncating='post')
     
-    model = LogisticRegression(max_iter=500)
-    model.fit(X_train_vec, y_train)
+    probs = predictor.model.predict(X_train_pad, verbose=0).flatten()
+    preds = (probs > 0.5).astype(int)
     
-    preds = model.predict(X_test_vec)
-    
-    print(f"Accuracy: {accuracy_score(y_test, preds):.4f}")
-    print(f"F1 Score: {f1_score(y_test, preds):.4f}")
+    print(f"Accuracy: {accuracy_score(y_train, preds):.4f}")
+    print(f"F1 Score: {f1_score(y_train, preds):.4f}")
     print("\nConfusion Matrix:")
-    print(confusion_matrix(y_test, preds))
+    print(confusion_matrix(y_train, preds))
     
-    misclassified_idx = (preds != y_test)
+    misclassified_idx = (preds != y_train)
     if misclassified_idx.any():
         print("\nExample Misclassification:")
         bad_idx = np.where(misclassified_idx)[0][0]
-        # Need to use .iloc for series indexing
-        bad_text = X_test.iloc[bad_idx]
-        true_label = "Positive" if y_test.iloc[bad_idx] == 1 else "Negative"
+        bad_text = X_train.iloc[bad_idx]
+        true_label = "Positive" if y_train.iloc[bad_idx] == 1 else "Negative"
         pred_label = "Positive" if preds[bad_idx] == 1 else "Negative"
         print(f"Text Snippet: {bad_text[:150]}...")
         print(f"True Label: {true_label} | Predicted Label: {pred_label}")
