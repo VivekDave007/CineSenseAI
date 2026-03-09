@@ -40,15 +40,37 @@ class DeepTabularChurnPipeline:
         if not self.model or not self.encoder or not self.scaler:
             return 0.0, ["Model Not Loaded"]
             
-        categorical_cols = ['Gender', 'Subscription Type', 'Device', 'Region', 'Favorite Genre']
-        encoded = self.encoder.transform(user_data[categorical_cols])
+        # Map the UI inputs to the 8 features the pre-trained model actually expects
+        age = user_data['Age'].values[0]
+        sub = user_data['Subscription Type'].values[0]
+        device = user_data['Device'].values[0]
+        cost = user_data['Monthly Cost'].values[0]
         
-        # Combine numerical and encoded categorical
-        numeric_cols = ['Age', 'Average Watch Time', 'Activity Level', 'Support Tickets', 'Monthly Cost']
-        numeric_data = user_data[numeric_cols].values
+        # Synthesize missing XGBoost features from the UI inputs
+        watch_hours = user_data['Average Watch Time'].values[0] * 4  # weekly to monthly
+        activity = user_data['Activity Level'].values[0]
+        last_login = max(1, 15 - activity) # High activity = low days since login
+        profiles = 2 # Default assumption
+        avg_watch = watch_hours / max(1, last_login)
         
-        X = np.hstack((numeric_data, encoded))
-        X_scaled = self.scaler.transform(X)
+        # The scaler expects exactly these 8 features in this order:
+        # ['age', 'subscription_type', 'watch_hours', 'last_login_days', 'device', 'monthly_fee', 'number_of_profiles', 'avg_watch_time_per_day']
+        
+        # Encode categorical variables using the dictionary of encoders
+        try:
+            enc_sub = self.encoder['subscription_type'].transform([sub])[0]
+            enc_dev = self.encoder['device'].transform([device])[0]
+        except ValueError:
+            # Fallback if UI passes unknown category
+            enc_sub = 0
+            enc_dev = 0
+            
+        # Build the exact vector for the scaler
+        vector = np.array([[
+            age, enc_sub, watch_hours, last_login, enc_dev, cost, profiles, avg_watch
+        ]])
+        
+        X_scaled = self.scaler.transform(vector)
         
         # Extract base probability from the trained Gradient Boosting tree
         base_probs = self.model.predict_proba(X_scaled)[0]
@@ -58,7 +80,7 @@ class DeepTabularChurnPipeline:
         top_factors = []
         if user_data['Support Tickets'].values[0] > 1:
             top_factors.append("High Support Ticket Volume")
-        if user_data['Activity Level'].values[0] < 5:
+        if activity < 5:
             top_factors.append("Low Login Activity")
         if user_data['Average Watch Time'].values[0] < 10:
             top_factors.append("Low Watch Time")
