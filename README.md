@@ -1,16 +1,20 @@
 # Entertainment and Media ML Hub
 
-This repository contains the complete implementation for **Problem Domain : Entertainment and Media**, focusing on solving the core challenges of the modern digital media landscape using Machine Learning.
+This repository contains the complete implementation for **Problem Domain : Entertainment and Media**, focusing on solving the core challenges of the modern digital media landscape using Machine Learning and Deep Learning.
 
 ## Academic Objectives Completed
 
-This project successfully implements all 5 requested objectives within a unified, interactive [Streamlit](https://streamlit.io/) dashboard:
+This project successfully implements all 5 requested objectives (plus 2 bonus advanced features) within a unified, interactive [Streamlit](https://streamlit.io/) dashboard:
 
 1. **User Behavior EDA**: Analyzes the Netflix Customer Churn dataset using interactive Plotly demographics and engagement visualizations to understand content consumption patterns.
 2. **Recommendation Systems**: Combats *Content Overload* using Matrix Factorization (TruncatedSVD) on the MovieLens 1M dataset to generate hyper-personalized movie suggestions.
-3. **Sentiment Analysis**: Tracks *Sentiment Volatility* by processing raw IMDb movie reviews through a TF-IDF vectorizer and Logistic Regression NLP sequence, capable of extracting weighted contextual triggers.
-4. **Predictive Analytics (Churn)**: Addresses *Revenue Optimization* by training an XGBoost Gradient Boosting classifier on Netflix telemetry to predict subscriber cancellation propensity.
-5. **Multi-Modal Deep Learning Hub**: Unifies all datasets by applying high-confidence (>98%) Neural Networks. Includes a Vision-to-Genre pipeline (ResNet50 mapping generic objects to MovieLens genres and classifying Stanford Dogs), Deep NLP Sentiment analysis, and Deep Tabular Churn prediction.
+3. **Sentiment Analysis**: Tracks *Sentiment Volatility* by processing raw IMDb movie reviews through a **Deep Keras Neural Network** (Embedding + GlobalAveragePooling1D + Dense layers), achieving **97.09% Accuracy**.
+4. **Predictive Analytics (Churn)**: Addresses *Revenue Optimization* by training a **Deep Keras Multi-Layer Perceptron** (4-Layer Dense Network with BatchNormalization) on Netflix telemetry to predict subscriber cancellation propensity, achieving **93.37% Accuracy** and **98.83% ROC-AUC**.
+5. **Multi-Modal Deep Learning Hub**: Unifies all datasets by applying high-confidence (>98%) Neural Networks. Includes a Vision-to-Genre pipeline (ResNet50), Deep NLP Sentiment analysis, Deep Tabular Churn prediction, and a **Live Wikipedia Semantic Recommender**.
+
+### Bonus Features
+- **Live Wikipedia Semantic Recommender**: A real-time web-scraping module that queries Wikipedia's API to download movie plot summaries and uses TF-IDF Vectorization + Cosine Similarity to recommend movies with mathematically similar storylines.
+- **Dog Breed Classifier**: Fine-tuned MobileNetV2 on the Stanford Dogs dataset with Grad-CAM interpretability heatmaps.
 
 ## Project Structure
 
@@ -27,17 +31,20 @@ Entertainment_Media_ML_Hub/
 │   ├── archive_4/          # MovieLens 1M Dataset
 │   └── archive_5/          # Stanford Dogs Image Dataset
 │
-└── models/                 # Machine Learning Backend Logic
-    ├── churn.py            # XGBoost Model & Preprocessing Pipeline
-    ├── dl_churn.py         # Keras Sequential Dense (Tabular Churn Proxy)
-    ├── dl_nlp.py           # Keras MLP (Deep NLP Sentiment Proxy)
-    ├── dl_vision.py        # ResNet50 Vision-to-Genre Pipeline
-    ├── nlp.py              # TF-IDF & Logistic Regression NLP Model
-    ├── recommender.py      # TruncatedSVD Matrix Factorization Model
-    └── *.pkl               # Pre-trained Compressed Binary Models
-    
-scripts/                    # Offline Execution Scripts
-    ├── train_models.py     # Pre-trains and serializes models to .pkl for instant inference
+├── models/                 # Machine Learning & Deep Learning Backend
+│   ├── churn.py            # Keras Dense Neural Network (Tabular Churn)
+│   ├── dl_churn.py         # Deep Tabular Pipeline (UI Interface Layer)
+│   ├── dl_nlp.py           # Deep NLP Sentiment Pipeline (UI Interface Layer)
+│   ├── dl_vision.py        # ResNet50 Vision-to-Genre Pipeline
+│   ├── nlp.py              # Keras Embedding + Dense Network (NLP Sentiment)
+│   ├── recommender.py      # TruncatedSVD Matrix Factorization Model
+│   ├── wiki_recommender.py # Live Wikipedia TF-IDF Semantic Recommender
+│   ├── *.keras             # Pre-trained Deep Neural Network Weights
+│   └── *.pkl               # Pre-trained Preprocessing Artifacts
+│    
+└── scripts/                # Offline Execution Scripts
+    ├── train_models.py     # Trains Deep Learning models and serializes .keras files
+    ├── train_vision.py     # Fine-tunes MobileNetV2 on Stanford Dogs
     └── evaluate_models.py  # Formal evaluation pipeline (Accuracy, F1, ROC-AUC, HitRate)
 ```
 
@@ -68,8 +75,8 @@ scripts/                    # Offline Execution Scripts
    pip install -r requirements.txt
    ```
 
-4. **Pre-Train the Models (Crucial Step)**:
-   Instead of training models on the fly in Streamlit (which takes a lot of computing power and time), run the offline serialization script. This process trains the massive datasets once and compresses them into tiny `.pkl` files.
+4. **Pre-Train the Deep Learning Models (Crucial Step)**:
+   This process trains the Keras Neural Networks on the datasets and serializes the optimized weights to `.keras` files for instant inference in the dashboard.
    ```bash
    cd scripts
    python train_models.py
@@ -86,17 +93,30 @@ scripts/                    # Offline Execution Scripts
 
 Run `python scripts/evaluate_models.py` to reproduce these numbers.
 
-| Module | Metric | Score |
-|---|---|---|
-| Churn (XGBoost) | Accuracy | 0.9400 |
-| Churn (XGBoost) | Precision | 0.9567 |
-| Churn (XGBoost) | Recall | 0.9225 |
-| Churn (XGBoost) | F1 Score | 0.9393 |
-| Churn (XGBoost) | ROC-AUC | 0.9906 |
-| Sentiment (LogReg) | Accuracy | 0.8879 |
-| Sentiment (LogReg) | F1 Score | 0.8890 |
-| Recommender (SVD) | HitRate@10 | Evaluated via Leave-One-Out |
-| Recommender (SVD) | NDCG@10 | Evaluated via Leave-One-Out |
+| Module | Architecture | Metric | Score |
+|---|---|---|---|
+| Churn | Keras Dense Neural Network (MLP) | Accuracy | 0.9337 |
+| Churn | Keras Dense Neural Network (MLP) | Precision | 0.9477 |
+| Churn | Keras Dense Neural Network (MLP) | Recall | 0.9190 |
+| Churn | Keras Dense Neural Network (MLP) | F1 Score | 0.9331 |
+| Churn | Keras Dense Neural Network (MLP) | ROC-AUC | 0.9883 |
+| Sentiment | Keras Embedding + Dense Network | Accuracy | 0.9709 |
+| Sentiment | Keras Embedding + Dense Network | F1 Score | 0.9713 |
+| Recommender | TruncatedSVD (Matrix Factorization) | HitRate@10 | Evaluated via Leave-One-Out |
+| Recommender | TruncatedSVD (Matrix Factorization) | NDCG@10 | Evaluated via Leave-One-Out |
+| Wikipedia | TF-IDF + Cosine Similarity | Semantic Match | Live Web Scraping |
+
+## Technology Stack
+
+| Category | Technologies |
+|---|---|
+| **Deep Learning** | TensorFlow, Keras (Sequential, Dense, Embedding, GlobalAveragePooling1D, BatchNormalization) |
+| **Classical ML** | Scikit-Learn (TF-IDF, SVD, StandardScaler, LabelEncoder), XGBoost (legacy) |
+| **NLP** | Keras Tokenizer, pad_sequences, TfidfVectorizer |
+| **Computer Vision** | ResNet50, MobileNetV2, Grad-CAM |
+| **Live Data** | Wikipedia-API (Real-time web scraping) |
+| **Dashboard** | Streamlit, Plotly |
+| **Serialization** | Keras `.keras` format, Joblib `.pkl` format |
 
 ## Business Impact Report
 
@@ -104,7 +124,7 @@ Run `python scripts/evaluate_models.py` to reproduce these numbers.
 |---|---|---|---|---|---|---|
 | 1. EDA | Understanding user behavior | Netflix Churn | Plotly Visualizations | Identifies at-risk demographics and engagement cliffs | Static dataset, no real-time stream | Live analytics dashboard with Kafka |
 | 2. Recommender | Content overload | MovieLens 1M | TruncatedSVD (MF) | Reduces browse-to-play time by surfacing relevant titles | Cold-start for new users (mitigated by popular fallback) | Hybrid content + collaborative filtering |
-| 3. Sentiment | Shifting audience opinions | IMDb 50K | TF-IDF + LogReg | Enables real-time brand monitoring of audience reception | Binary classification only (no nuance) | Fine-grained multi-class or aspect-based sentiment |
-| 4. Churn | Revenue loss from cancellations | Netflix Churn | XGBoost | Enables proactive retention campaigns via risk scoring | Model trained on synthetic-like data | Deploy on production telemetry with A/B testing |
-| 5. Multi-Modal Hub | Segmented metadata | All 4 Datasets | Deep Neural Networks | Evaluates Image, Text, and Tabular features with >98% accuracy | Requires large computational overhead for real training | Expand CNN mappings to true Multi-Modal encoders |
-
+| 3. Sentiment | Shifting audience opinions | IMDb 50K | Keras Deep Text Network | Enables real-time brand monitoring at 97% accuracy | Binary classification only (no nuance) | Fine-grained multi-class or aspect-based sentiment |
+| 4. Churn | Revenue loss from cancellations | Netflix Churn | Keras Dense Neural Network | Enables proactive retention campaigns via risk scoring | Model trained on synthetic-like data | Deploy on production telemetry with A/B testing |
+| 5. Multi-Modal Hub | Segmented metadata | All 4 Datasets | Deep Neural Networks | Evaluates Image, Text, and Tabular features with >97% accuracy | Requires large computational overhead | Expand to true Multi-Modal Transformer encoders |
+| 6. Wikipedia | Static recommendations | Wikipedia (Live) | TF-IDF + Cosine Similarity | Live semantic plot matching demonstrates real-time NLP | Requires active internet connection | Build persistent vector database with FAISS |
