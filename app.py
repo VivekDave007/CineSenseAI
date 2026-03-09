@@ -235,7 +235,7 @@ def render_eda():
 
 def render_recommender():
     st.title("Movie Recommendations")
-    st.info("Select your favorite genre to get the top-rated movie suggestions powered by Matrix Factorization (SVD).")
+    st.info("Discover movies by combining **Genre**, **Decade**, and **Mood** filters. Powered by Matrix Factorization (SVD) on 1 million ratings.")
     
     from models.recommender import MovieRecommender
     
@@ -247,34 +247,59 @@ def render_recommender():
     
     rec_model = load_model()
     
-    # Genre selection input
-    available_genres = [
-        "Action", "Adventure", "Animation", "Children's", "Comedy", 
-        "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir",
-        "Horror", "Musical", "Mystery", "Romance", "Sci-Fi", 
-        "Thriller", "War", "Western"
-    ]
+    # --- 3-Column Filter Layout ---
+    col_genre, col_decade, col_mood = st.columns(3)
     
-    col_input, col_count = st.columns([2, 1])
-    with col_input:
-        selected_genre = st.selectbox("Choose a Genre:", available_genres, index=4)  # Default: Comedy
-    with col_count:
-        num_recs = st.slider("Number of Recommendations:", 3, 10, 5)
+    with col_genre:
+        available_genres = [
+            "Any", "Action", "Adventure", "Animation", "Children's", "Comedy", 
+            "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir",
+            "Horror", "Musical", "Mystery", "Romance", "Sci-Fi", 
+            "Thriller", "War", "Western"
+        ]
+        selected_genre = st.selectbox("Genre:", available_genres, index=0)
+    
+    with col_decade:
+        available_decades = ["Any", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s"]
+        selected_decade = st.selectbox("Decade:", available_decades, index=0)
+    
+    with col_mood:
+        available_moods = [
+            "Any Mood", "Feel Good", "Dark & Intense", "Epic Adventure", 
+            "Date Night", "Mind-Bending", "Tear Jerker", 
+            "Family Friendly", "Edge of Your Seat"
+        ]
+        selected_mood = st.selectbox("Mood:", available_moods, index=0)
+    
+    num_recs = st.slider("Number of Recommendations:", 3, 10, 5)
+    
+    # Build a dynamic filter summary
+    active_filters = []
+    if selected_genre != "Any": active_filters.append(f"**{selected_genre}**")
+    if selected_decade != "Any": active_filters.append(f"**{selected_decade}**")
+    if selected_mood != "Any Mood": active_filters.append(f"**{selected_mood}**")
+    filter_summary = " + ".join(active_filters) if active_filters else "**All Movies**"
+    st.caption(f"Active Filters: {filter_summary}")
     
     if st.button("Get Recommendations", type="primary"):
-        with st.spinner(f"Finding the best {selected_genre} movies using SVD Latent Factors..."):
-            recs = rec_model.get_recommendations_by_genre(selected_genre, num_recommendations=num_recs)
+        with st.spinner(f"Searching {filter_summary} using SVD Latent Factors..."):
+            recs = rec_model.get_recommendations_filtered(
+                genre=selected_genre, 
+                decade=selected_decade, 
+                mood=selected_mood, 
+                num_recommendations=num_recs
+            )
             
             if not recs:
-                st.error(f"No movies found for genre: {selected_genre}")
+                st.error(f"No movies found matching: {filter_summary}. Try broadening your filters.")
             else:
-                st.success(f"Top {len(recs)} {selected_genre} Movies (Ranked by Collaborative Filtering)")
+                st.success(f"Top {len(recs)} Movies matching {filter_summary}")
                 
                 cols = st.columns(min(len(recs), 5))
                 for idx, (col, r) in enumerate(zip(cols, recs[:5])):
                     with col:
                         st.markdown(f'''
-                        <div style="background-color:rgba(128,128,128,0.1); padding:0.8rem; border-radius:10px; min-height:180px; text-align:center; display:flex; flex-direction:column; justify-content:center; overflow:hidden;">
+                        <div style="background-color:rgba(128,128,128,0.1); padding:0.8rem; border-radius:10px; min-height:200px; text-align:center; display:flex; flex-direction:column; justify-content:center; overflow:hidden;">
                             <h4 style="margin:0 0 4px 0; color:#1E88E5;">#{idx+1}</h4>
                             <p style="font-weight:bold; margin:0 0 4px 0; font-size:0.85rem; line-height:1.2;">{r['title']}</p>
                             <p style="font-size:0.75rem; opacity:0.7; margin:0 0 4px 0;">{r['genre'].replace("|", ", ")}</p>

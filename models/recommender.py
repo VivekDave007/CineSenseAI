@@ -134,45 +134,81 @@ class MovieRecommender:
         except Exception as e:
             return [{"title": self.clean_title(m[0]), "genre": m[1], "reason": "Globally popular content"} for m in self.popular_movies[:num_recommendations]]
 
-    def get_recommendations_by_genre(self, genre, num_recommendations=5):
-        """Given a genre string, return top N highest-rated movies in that genre using SVD predicted scores."""
+    # Mood-to-genre mapping for intuitive discovery
+    MOOD_MAP = {
+        "Any Mood": [],
+        "Feel Good": ["Comedy", "Animation", "Musical", "Children's"],
+        "Dark & Intense": ["Thriller", "Crime", "Film-Noir", "Horror"],
+        "Epic Adventure": ["Action", "Adventure", "Fantasy", "Sci-Fi"],
+        "Date Night": ["Romance", "Comedy", "Drama"],
+        "Mind-Bending": ["Sci-Fi", "Mystery", "Thriller"],
+        "Tear Jerker": ["Drama", "Romance", "War"],
+        "Family Friendly": ["Animation", "Children's", "Comedy", "Adventure"],
+        "Edge of Your Seat": ["Action", "Thriller", "Crime", "War"],
+    }
+
+    def get_recommendations_filtered(self, genre="Any", decade="Any", mood="Any Mood", num_recommendations=5):
+        """Combined filter: Genre + Decade + Mood. Returns top N SVD-ranked movies matching all criteria."""
         if not self.is_loaded:
             success = self.load_pretrained()
             if not success: return []
             
         try:
-            # Filter movies that contain the requested genre
-            genre_movies = self.movies[self.movies['genre'].str.contains(genre, case=False, na=False)]
+            filtered = self.movies.copy()
             
-            if genre_movies.empty:
+            # --- Genre Filter ---
+            if genre and genre != "Any":
+                filtered = filtered[filtered['genre'].str.contains(genre, case=False, na=False)]
+            
+            # --- Decade Filter ---
+            if decade and decade != "Any":
+                # Extract year from title like "Toy Story (1995)"
+                filtered = filtered.copy()
+                filtered['year'] = filtered['title'].str.extract(r'\((\d{4})\)').astype(float)
+                decade_start = int(decade.replace('s', ''))
+                filtered = filtered[(filtered['year'] >= decade_start) & (filtered['year'] < decade_start + 10)]
+                filtered = filtered.drop(columns=['year'])
+            
+            # --- Mood Filter ---
+            if mood and mood != "Any Mood" and mood in self.MOOD_MAP:
+                mood_genres = self.MOOD_MAP[mood]
+                if mood_genres:
+                    mood_mask = filtered['genre'].apply(
+                        lambda g: any(mg in g for mg in mood_genres)
+                    )
+                    filtered = filtered[mood_mask]
+            
+            if filtered.empty:
                 return []
             
-            # Calculate the average predicted rating across ALL users for each movie
+            # Calculate average predicted rating across all users for ranking
             all_preds = np.dot(self.matrix_factorization, self.svd_components) + self.user_ratings_mean.reshape(-1, 1)
             avg_preds = np.mean(all_preds, axis=0)
             
-            # Map movie_ids to their average predicted score
-            movie_scores = {}
-            for i, m_id in enumerate(self.movie_ids):
-                movie_scores[m_id] = avg_preds[i]
+            movie_scores = {m_id: avg_preds[i] for i, m_id in enumerate(self.movie_ids)}
             
-            # Score and rank the genre-filtered movies
-            scored_movies = []
-            for _, row in genre_movies.iterrows():
-                m_id = row['movie_id']
-                score = movie_scores.get(m_id, 0)
-                scored_movies.append((row, score))
+            scored = []
+            for _, row in filtered.iterrows():
+                score = movie_scores.get(row['movie_id'], 0)
+                scored.append((row, score))
             
-            scored_movies.sort(key=lambda x: x[1], reverse=True)
+            scored.sort(key=lambda x: x[1], reverse=True)
+            
+            # Build reason string
+            filters_used = []
+            if genre != "Any": filters_used.append(genre)
+            if decade != "Any": filters_used.append(decade)
+            if mood != "Any Mood": filters_used.append(f'"{mood}"')
+            reason_str = " + ".join(filters_used) if filters_used else "All movies"
             
             results = []
-            for row, score in scored_movies[:num_recommendations]:
+            for row, score in scored[:num_recommendations]:
                 results.append({
                     "title": self.clean_title(row['title']),
                     "genre": row['genre'],
-                    "reason": f"Top-rated {genre} movie by collaborative analysis"
+                    "reason": f"Top-rated match for {reason_str}"
                 })
             return results
         except Exception as e:
-            print(f"Genre recommendation error: {e}")
+            print(f"Filtered recommendation error: {e}")
             return [{"title": self.clean_title(m[0]), "genre": m[1], "reason": "Globally popular content"} for m in self.popular_movies[:num_recommendations]]
