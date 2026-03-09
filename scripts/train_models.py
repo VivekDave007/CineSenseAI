@@ -14,16 +14,15 @@ def extract_and_save_models():
     print("-" * 50)
     
     # 1. Train and save the Churn Model
-    print("\n[1/3] Training XGBoost Churn Predictor...")
-    churn_model = ChurnPredictor(data_path="../data/archive_2/netflix_customer_churn.csv")
+    # 1. Train and serialize the Deep Tabular Churn Network
+    print("\n[1/3] Training Deep Keras Tabular Network (Churn)...")
+    churn_model = ChurnPredictor(
+        data_path="../data/archive_2/netflix_customer_churn.csv",
+        model_path="../models/churn_mlp.keras",
+        artifacts_path="../models/churn_artifacts.pkl"
+    )
     if churn_model.train_model():
-        # Save the XGBoost core model, the scaler, and the label encoders
-        joblib.dump({
-            'model': churn_model.model,
-            'scaler': churn_model.scaler,
-            'encoders': churn_model.label_encoders,
-            'features': churn_model.features
-        }, '../models/churn_model.pkl')
+        print("Tabular Network successfully optimized and saved to models/churn_mlp.keras")
         
         # Save a small 2,000 row sample of the DataFrame for the EDA dashboard
         # This prevents Streamlit from needing the massive raw CSV online
@@ -31,22 +30,20 @@ def extract_and_save_models():
         raw_df = pd.read_csv("../data/archive_2/netflix_customer_churn.csv")
         sample_df = raw_df.sample(min(2000, len(raw_df)), random_state=42)
         joblib.dump(sample_df, '../models/churn_eda_sample.pkl')
-        
-        print("Churn Model serialized to models/churn_model.pkl")
     else:
-        print("Failed to train Churn Model.")
+        print("Failed to train Churn Neural Network.")
         
-    # 2. Train and save the NLP Model
-    print("\n[2/3] Training TF-IDF NLP Sentiment Analyzer...")
-    nlp_model = SentimentAnalyzer(data_path="../data/archive_3/IMDB Dataset.csv")
+    # 2. Train and serialize the Deep NLP Sentiment Network
+    print("\n[2/3] Training Bidirectional LSTM (Sentiment)...")
+    nlp_model = SentimentAnalyzer(
+        data_path="../data/archive_3/IMDB Dataset.csv",
+        model_path="../models/nlp_lstm.keras",
+        tokenizer_path="../models/nlp_tokenizer.pkl"
+    )
     if nlp_model.train_model():
-        joblib.dump({
-            'model': nlp_model.model,
-            'vectorizer': nlp_model.vectorizer
-        }, '../models/nlp_model.pkl')
-        print("NLP Model serialized to models/nlp_model.pkl")
+        print("LSTM Network successfully optimized and saved to models/nlp_lstm.keras")
     else:
-        print("Failed to train NLP Model.")
+        print("Failed to train NLP network.")
         
     # 3. Train and save the Recommender Factorization
     print("\n[3/3] Training Matrix Factorization Engine...")
