@@ -457,10 +457,11 @@ def render_vision():
     st.header("Deep Learning - Multi-Modal Hub")
     st.info("**Model Portfolio:** This section unifies all 4 datasets using Deep Neural Networks, delivering >98% accuracy across Image, Text, and Tabular data.")
     
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "🖼️ Vision-to-Genre (Stanford Dogs & MovieLens)", 
         "📝 Deep NLP Sentiment (IMDb Reviews)", 
-        "📊 Deep Tabular Churn (Netflix)"
+        "📊 Deep Tabular Churn (Netflix)",
+        "🌐 Live Wikipedia Semantic Recommender"
     ])
     
     with tab1:
@@ -581,6 +582,42 @@ def render_vision():
                     
                 st.progress(float(min(churn_prob / 100.0, 1.0)))
                 st.info(f"**Vector Extraction Highlights:** {', '.join(top_factors)}")
+
+    with tab4:
+        st.write("### Live Wikipedia Semantic Plot Recommender")
+        st.info("**Real-Time Web Scraping:** This module queries **Wikipedia's live servers** to download movie plot summaries, then uses **TF-IDF Vectorization** and **Cosine Similarity** to find movies with mathematically similar storylines.")
+        
+        st.warning("Requires an active internet connection. First load may take 10-15 seconds as we download 40 movie plots from Wikipedia.")
+        
+        movie_input = st.text_input("Enter a Movie Title (e.g., 'Inception', 'The Godfather'):", key='wiki_movie')
+        
+        if st.button("Find Similar Plotlines"):
+            if movie_input:
+                with st.spinner(f"Scraping Wikipedia for '{movie_input}' and calculating semantic vectors..."):
+                    from models.wiki_recommender import WikipediaRecommender
+                    
+                    @st.cache_resource
+                    def load_wiki_engine():
+                        return WikipediaRecommender()
+                    
+                    wiki_engine = load_wiki_engine()
+                    results, status_msg = wiki_engine.find_similar_movies(movie_input, top_k=3)
+                    
+                    st.caption(f"Status: {status_msg}")
+                    
+                    if results:
+                        st.success(f"Found {len(results)} semantically similar movies based on Wikipedia plot analysis!")
+                        
+                        for i, match in enumerate(results):
+                            with st.expander(f"#{i+1}: {match['title']} (Similarity: {match['similarity_score']}%)", expanded=True):
+                                st.metric("Cosine Similarity Score", f"{match['similarity_score']}%")
+                                st.progress(min(match['similarity_score'] / 100.0, 1.0))
+                                st.write("**Plot Snippet (from Wikipedia):**")
+                                st.caption(match['plot_snippet'])
+                    else:
+                        st.error("Could not find this movie on Wikipedia. Try the exact title (e.g., 'The Matrix' instead of 'Matrix').")
+            else:
+                st.warning("Please type a movie title above.")
 
 if __name__ == "__main__":
     main()

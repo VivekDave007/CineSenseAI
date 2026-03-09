@@ -8,3 +8,4 @@ joblib
 tensorflow
 Pillow
 matplotlib
+wikipedia-api
