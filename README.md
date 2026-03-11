@@ -20,20 +20,25 @@ This project successfully implements all 5 requested objectives (plus 2 bonus ad
 
 ```mermaid
 graph TD
+    %% Custom Styling
+    classDef data fill:#2C3E50,stroke:#34495E,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef model fill:#8E44AD,stroke:#9B59B6,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef ui fill:#27AE60,stroke:#2ECC71,stroke-width:2px,color:#fff,rx:15px,ry:15px;
+
     %% Define Sources
     subgraph Data Sources
-        DS1[("Netflix Telemetry CSV")]
-        DS2[("IMDb Reviews CSV")]
-        DS3[("MovieLens 1M CSV")]
-        DS4(("Live Wikipedia API"))
+        DS1[("Netflix Telemetry CSV")]:::data
+        DS2[("IMDb Reviews CSV")]:::data
+        DS3[("MovieLens 1M CSV")]:::data
+        DS4(("Live Wikipedia API")):::data
     end
 
     %% Define ML Backend Models
     subgraph Machine Learning Backend
-        ML1["Deep Tabular Churn Model<br><i>(Keras MLP + Batch Norm)</i>"]
-        ML2["Deep NLP Sentiment Model<br><i>(Keras Embedding + Dense)</i>"]
-        ML3["Collaborative Recommender<br><i>(TruncatedSVD Matrix Factorization)</i>"]
-        ML4["Live Semantic Plot Matcher<br><i>(TF-IDF + Cosine Similarity)</i>"]
+        ML1["Deep Tabular Churn Model<br><i>(Keras MLP + Batch Norm)</i>"]:::model
+        ML2["Deep NLP Sentiment Model<br><i>(Keras Embedding + Dense)</i>"]:::model
+        ML3["Collaborative Recommender<br><i>(TruncatedSVD Matrix Factorization)</i>"]:::model
+        ML4["Live Semantic Plot Matcher<br><i>(TF-IDF + Cosine Similarity)</i>"]:::model
     end
 
     %% Connect Sources to Models
@@ -44,12 +49,12 @@ graph TD
 
     %% Define Streamlit Frontend
     subgraph Streamlit UI
-        UI1{"Dashboard Overview"}
-        UI2{"EDA: Content Trends"}
-        UI3{"Genre/Decade/Mood Filtering"}
-        UI4{"Sentiment Volatility Analysis"}
-        UI5{"Subscriber Churn Prediction"}
-        UI6{"Semantic Plot Web-Scraper"}
+        UI1{"Dashboard Overview"}:::ui
+        UI2{"EDA: Content Trends"}:::ui
+        UI3{"Genre/Decade/Mood Filtering"}:::ui
+        UI4{"Sentiment Volatility Analysis"}:::ui
+        UI5{"Subscriber Churn Prediction"}:::ui
+        UI6{"Semantic Plot Web-Scraper"}:::ui
     end
 
     %% Connect Models to UI
