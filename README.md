@@ -22,41 +22,41 @@ This project successfully implements all 5 requested objectives (plus 2 bonus ad
 graph TD
     %% Define Sources
     subgraph Data Sources
-        DS1[(Netflix Telemetry CSV)]
-        DS2[(IMDb Reviews CSV)]
-        DS3[(MovieLens 1M CSV)]
-        DS4((Live Wikipedia API))
+        DS1[("Netflix Telemetry CSV")]
+        DS2[("IMDb Reviews CSV")]
+        DS3[("MovieLens 1M CSV")]
+        DS4(("Live Wikipedia API"))
     end
 
     %% Define ML Backend Models
     subgraph Machine Learning Backend
-        ML1[Deep Tabular Churn Model<br><i>(Keras MLP + Batch Norm)</i>]
-        ML2[Deep NLP Sentiment Model<br><i>(Keras Embedding + Dense)</i>]
-        ML3[Collaborative Recommender<br><i>(TruncatedSVD Matrix Factorization)</i>]
-        ML4[Live Semantic Plot Matcher<br><i>(TF-IDF + Cosine Similarity)</i>]
+        ML1["Deep Tabular Churn Model<br><i>(Keras MLP + Batch Norm)</i>"]
+        ML2["Deep NLP Sentiment Model<br><i>(Keras Embedding + Dense)</i>"]
+        ML3["Collaborative Recommender<br><i>(TruncatedSVD Matrix Factorization)</i>"]
+        ML4["Live Semantic Plot Matcher<br><i>(TF-IDF + Cosine Similarity)</i>"]
     end
 
     %% Connect Sources to Models
-    DS1 -->|Train/Pre-Process| ML1
-    DS2 -->|Train/Pre-Process| ML2
-    DS3 -->|Train/Pre-Process| ML3
-    DS4 -->|Real-Time Scraping| ML4
+    DS1 -->|"Train/Pre-Process"| ML1
+    DS2 -->|"Train/Pre-Process"| ML2
+    DS3 -->|"Train/Pre-Process"| ML3
+    DS4 -->|"Real-Time Scraping"| ML4
 
     %% Define Streamlit Frontend
     subgraph Streamlit UI
-        UI1{Dashboard Overview}
-        UI2{EDA: Content Trends}
-        UI3{Genre/Decade/Mood Filtering}
-        UI4{Sentiment Volatility Analysis}
-        UI5{Subscriber Churn Prediction}
-        UI6{Semantic Plot Web-Scraper}
+        UI1{"Dashboard Overview"}
+        UI2{"EDA: Content Trends"}
+        UI3{"Genre/Decade/Mood Filtering"}
+        UI4{"Sentiment Volatility Analysis"}
+        UI5{"Subscriber Churn Prediction"}
+        UI6{"Semantic Plot Web-Scraper"}
     end
 
     %% Connect Models to UI
-    ML3 -->|SVD Features| UI3
-    ML2 -->|Keras Confidence Score| UI4
-    ML1 -->|Keras Retention Vector| UI5
-    ML4 -->|Wikipedia Match Array| UI6
+    ML3 -->|"SVD Features"| UI3
+    ML2 -->|"Keras Confidence Score"| UI4
+    ML1 -->|"Keras Retention Vector"| UI5
+    ML4 -->|"Wikipedia Match Array"| UI6
 ```
 
 ## Project Structure
