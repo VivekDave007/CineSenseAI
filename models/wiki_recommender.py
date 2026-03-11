@@ -41,8 +41,8 @@ class WikipediaRecommender:
         # Cache to prevent spamming Wikipedia's servers during the same session
         self.plot_cache = {}
         
-        # Pre-load the background database text
-        self._initialize_database()
+        # Lazy Loading: Do not initialize API calls on instantiation
+        self.is_initialized = False
 
     def _clean_text(self, text):
         """Simplifies complex encyclopedia text for cleaner vectorization."""
@@ -56,13 +56,18 @@ class WikipediaRecommender:
         if movie_title in self.plot_cache:
             return self.plot_cache[movie_title]
             
+        import requests
         try:
+            # We use a tight timeout because Streamlit UI will freeze otherwise
+            import socket
+            socket.setdefaulttimeout(5.0)
+            
             page = self.wiki.page(movie_title)
             if not page.exists():
                 # Try adding '(film)' as Wikipedia often disambiguates
                 page = self.wiki.page(f"{movie_title} (film)")
                 if not page.exists():
-                    return None
+                    return "NOT_FOUND"
                     
             # Isolate the plot section. If no formal "Plot" header, fallback to the summary intro
             plot_section = page.section_by_title('Plot')
@@ -75,9 +80,12 @@ class WikipediaRecommender:
             self.plot_cache[movie_title] = clean_plot
             return clean_plot
             
+        except (requests.exceptions.RequestException, requests.exceptions.Timeout, TimeoutError, socket.timeout) as e:
+            print(f"Offline Mode Triggered: Connection Error to Wikipedia for {movie_title} - {e}")
+            return "OFFLINE_ERROR"
         except Exception as e:
             print(f"Warning: Failed to fetch {movie_title} from Wikipedia: {e}")
-            return None
+            return "NOT_FOUND"
 
     def _initialize_database(self):
         """Populates the TF-IDF vector space with the 40 background movies."""
@@ -87,11 +95,17 @@ class WikipediaRecommender:
         
         for movie in self.movie_database:
             plot = self._extract_plot(movie)
-            if plot:
+            if plot and plot not in ["NOT_FOUND", "OFFLINE_ERROR"]:
                 import re
                 clean_title = re.sub(r'\s*\(\d{4}\s*film\)', '', movie).replace(' (film)', '').strip()
                 self.corpus_titles.append(clean_title)
                 self.corpus_plots.append(plot)
+            elif plot == "OFFLINE_ERROR":
+                # Bubble up the offline error to abort initialization
+                return False
+                
+        self.is_initialized = True
+        return True
 
     def find_similar_movies(self, target_movie, top_k=3):
         """
@@ -100,9 +114,17 @@ class WikipediaRecommender:
         2. TF-IDF vectorizes it against the 40-movie background space.
         3. Returns the Top-K Cosine Similarity matches.
         """
+        # Lazy initialization trigger
+        if not self.is_initialized:
+            success = self._initialize_database()
+            if not success:
+                return None, "Offline Mode: Cannot reach Wikipedia servers. Please check your internet connection."
+            
         target_plot = self._extract_plot(target_movie)
         
-        if not target_plot:
+        if target_plot == "OFFLINE_ERROR":
+            return None, "Offline Mode: Cannot reach Wikipedia servers. Please check your internet connection."
+        if not target_plot or target_plot == "NOT_FOUND":
             return None, "Error: Could not locate a Wikipedia page or plot summary for this movie."
             
         # Temporarily append the user's movie to the corpus so TF-IDF learns its vocabulary

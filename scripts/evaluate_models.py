@@ -45,19 +45,20 @@ def evaluate_churn():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
     numerical_cols = [c for c in features if c not in ['subscription_type', 'device']]
-    X_train[numerical_cols] = predictor.scaler.transform(X_train[numerical_cols])
+    # Transform test set using the scaler trained from the original data (which is loaded in predictor)
+    X_test[numerical_cols] = predictor.scaler.transform(X_test[numerical_cols])
     
-    # Get neural network probabilities and threshold at 0.5
-    probs = predictor.model.predict(X_train, verbose=0).flatten()
+    # Get neural network probabilities and threshold at 0.5 on strictly unseen TEST data
+    probs = predictor.model.predict(X_test, verbose=0).flatten()
     preds = (probs > 0.5).astype(int)
     
-    print(f"Accuracy:  {accuracy_score(y_train, preds):.4f}")
-    print(f"Precision: {precision_score(y_train, preds):.4f}")
-    print(f"Recall:    {recall_score(y_train, preds):.4f}")
-    print(f"F1 Score:  {f1_score(y_train, preds):.4f}")
-    print(f"ROC-AUC:   {roc_auc_score(y_train, probs):.4f}")
+    print(f"Accuracy:  {accuracy_score(y_test, preds):.4f}")
+    print(f"Precision: {precision_score(y_test, preds):.4f}")
+    print(f"Recall:    {recall_score(y_test, preds):.4f}")
+    print(f"F1 Score:  {f1_score(y_test, preds):.4f}")
+    print(f"ROC-AUC:   {roc_auc_score(y_test, probs):.4f}")
     print("\nConfusion Matrix:")
-    print(confusion_matrix(y_train, preds))
+    print(confusion_matrix(y_test, preds))
     print("="*50 + "\n")
 
 def clean_text(text):
@@ -92,23 +93,23 @@ def evaluate_nlp():
     X_train, X_test, y_train, y_test = train_test_split(df['cleaned_review'], df['sentiment_binary'], test_size=0.2, random_state=42, stratify=df['sentiment_binary'])
     
     # Pad sequences to match the exact dimensions expected by the Neural Network
-    X_train_seq = predictor.tokenizer.texts_to_sequences(X_train)
-    X_train_pad = pad_sequences(X_train_seq, maxlen=predictor.max_len, padding='post', truncating='post')
+    X_test_seq = predictor.tokenizer.texts_to_sequences(X_test)
+    X_test_pad = pad_sequences(X_test_seq, maxlen=predictor.max_len, padding='post', truncating='post')
     
-    probs = predictor.model.predict(X_train_pad, verbose=0).flatten()
+    probs = predictor.model.predict(X_test_pad, verbose=0).flatten()
     preds = (probs > 0.5).astype(int)
     
-    print(f"Accuracy: {accuracy_score(y_train, preds):.4f}")
-    print(f"F1 Score: {f1_score(y_train, preds):.4f}")
+    print(f"Accuracy: {accuracy_score(y_test, preds):.4f}")
+    print(f"F1 Score: {f1_score(y_test, preds):.4f}")
     print("\nConfusion Matrix:")
-    print(confusion_matrix(y_train, preds))
+    print(confusion_matrix(y_test, preds))
     
-    misclassified_idx = (preds != y_train)
+    misclassified_idx = (preds != y_test)
     if misclassified_idx.any():
         print("\nExample Misclassification:")
         bad_idx = np.where(misclassified_idx)[0][0]
-        bad_text = X_train.iloc[bad_idx]
-        true_label = "Positive" if y_train.iloc[bad_idx] == 1 else "Negative"
+        bad_text = X_test.iloc[bad_idx]
+        true_label = "Positive" if y_test.iloc[bad_idx] == 1 else "Negative"
         pred_label = "Positive" if preds[bad_idx] == 1 else "Negative"
         print(f"Text Snippet: {bad_text[:150]}...")
         print(f"True Label: {true_label} | Predicted Label: {pred_label}")

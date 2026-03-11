@@ -1,5 +1,7 @@
 # Entertainment and Media ML Hub
 
+🔥 **Live Interactive Application:** [entertainmentmediamlapp.streamlit.app](https://entertainmentmediamlapp.streamlit.app/)
+
 This repository contains the complete implementation for **Problem Domain : Entertainment and Media**, focusing on solving the core challenges of the modern digital media landscape using Machine Learning and Deep Learning.
 
 ## Academic Objectives Completed
@@ -67,6 +69,7 @@ graph TD
 ## Dashboard Screenshots
 
 To provide a visual sense of the deployed Streamlit application:
+👉 **[Click Here to view the Live Streamlit Deployment](https://entertainmentmediamlapp.streamlit.app/)**
 
 ### 1. Main Dashboard & KPI Overview
 ![Main Dashboard](media/dashboard_overview.png)

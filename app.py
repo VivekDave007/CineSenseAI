@@ -574,7 +574,7 @@ def render_vision():
         st.info("Uses a Keras-style architecture on the **Netflix Dataset** to output deterministic churn probability distributions.")
         
         # DL Churn Inputs
-        import pandas as pd
+        
         col1, col2, col3 = st.columns(3)
         with col1:
             dl_age = st.slider("User Age", 18, 70, 30, key='dl_age')
@@ -597,22 +597,41 @@ def render_vision():
                 from models.dl_churn import DeepTabularChurnPipeline
                 dl_churn = DeepTabularChurnPipeline()
                 
+                import pandas as pd
                 user_df = pd.DataFrame([{
-                    'Age': dl_age, 'Gender': dl_gender, 'Subscription Type': dl_sub,
-                    'Monthly Cost': dl_cost, 'Device': dl_device, 'Average Watch Time': dl_watch,
-                    'Activity Level': dl_activity, 'Support Tickets': dl_tickets,
-                    'Region': dl_region, 'Favorite Genre': dl_genre
+                    'Age': dl_age,
+                    'Gender': dl_gender,
+                    'Region': dl_region,
+                    'Subscription Type': dl_sub,
+                    'Device': dl_device,
+                    'Monthly Cost': dl_cost,
+                    'Number of Profiles': 1,
+                    'Avg Watch Time Per Day': dl_watch / 7.0,
+                    'Total Watch Hours': dl_watch,
+                    'Days Since Last Login': 2.0,
+                    'Account Age Months': 12.0
                 }])
                 
-                churn_prob, top_factors = dl_churn.predict_churn_dl(user_df)
+                churn_prob, top_factors = dl_churn.predict_churn(user_df)
                 
-                st.write("### Deep Learning Churn Vector")
+                st.success("✅ **Tabular Network Forward Pass Complete**")
+                res_col1, res_col2 = st.columns([1, 1])
                 
-                if churn_prob > 50:
-                    st.error(f"**High Disconnection Risk Detected** ({churn_prob:.2f}% Confidence)")
-                else:
-                    st.success(f"**Stable Subscriber Profile** ({100 - churn_prob:.2f}% Retention Confidence)")
-                    
+                with res_col1:
+                    st.metric(label="Predicted Churn Probability", value=f"{churn_prob:.1f}%")
+                
+                with res_col2:
+                    st.write("### Network Retention Vector Analysis")
+                    if churn_prob > 65:
+                        st.error(f"**High Risk Profile**")
+                        st.markdown(f"> **Action Recommended:** Trigger immediate retention offer (20% off next month).")
+                    elif churn_prob > 35:
+                        st.warning(f"**Medium Risk Profile**")
+                        st.markdown(f"> **Action Recommended:** Send a re-engagement email with new popular releases.")
+                    else:
+                        st.success(f"**Low Risk Profile**")
+                        st.markdown(f"> **Action Recommended:** No action needed. User is highly engaged.")
+                
                 st.progress(float(min(churn_prob / 100.0, 1.0)))
                 st.info(f"**Vector Extraction Highlights:** {', '.join(top_factors)}")
 
@@ -620,7 +639,7 @@ def render_vision():
         st.write("### Live Wikipedia Semantic Plot Recommender")
         st.info("**Real-Time Web Scraping:** This module queries **Wikipedia's live servers** to download movie plot summaries, then uses **TF-IDF Vectorization** and **Cosine Similarity** to find movies with mathematically similar storylines.")
         
-        st.warning("Requires an active internet connection. First load may take 10-15 seconds as we download 40 movie plots from Wikipedia.")
+        st.warning("First load may take 5-10 seconds to scrape 40 baseline movie plots from Wikipedia.")
         
         movie_input = st.text_input("Enter a Movie Title (e.g., 'Inception', 'The Godfather'):", key='wiki_movie')
         
@@ -652,6 +671,7 @@ def render_vision():
                         
                         # --- CSV Download Feature ---
                         st.markdown("<br>", unsafe_allow_html=True)
+                        import pandas as pd
                         df_wiki = pd.DataFrame(results)
                         csv_wiki = df_wiki.to_csv(index=False).encode('utf-8')
                         st.download_button(
@@ -662,7 +682,7 @@ def render_vision():
                             type="secondary"
                         )
                     else:
-                        st.error("Could not find this movie on Wikipedia. Try the exact title (e.g., 'The Matrix' instead of 'Matrix').")
+                        st.error("Could not find this movie on Wikipedia, or there is an internet connection issue. Try the exact title (e.g., 'The Matrix').")
             else:
                 st.warning("Please type a movie title above.")
 
