@@ -52,7 +52,21 @@ def main():
         )
         
         st.markdown("---")
-        st.write("v1.0 (Prototype)")
+        st.markdown("""
+        **About the Developer**
+        
+        This project was developed as a comprehensive Academic/Portfolio demonstration of end-to-end Machine Learning deployment.
+        
+        [🔗 GitHub Profile](https://github.com/VivekDave007)  
+        [💼 LinkedIn](https://linkedin.com/in/vivekdave)
+        
+        **Tech Stack:**
+        - Keras (Deep Learning)
+        - Scikit-Learn (SVD, TF-IDF)
+        - Streamlit (UI/UX)
+        - Wikipedia API (Web Scraping)
+        """)
+        st.write("v1.2.0 (Final Architecture)")
 
     if app_mode == "Dashboard Overview":
         render_dashboard()
@@ -312,6 +326,20 @@ def render_recommender():
                     st.markdown("---")
                     for idx, r in enumerate(recs[5:], start=6):
                         st.write(f"**#{idx}. {r['title']}** - {r['genre'].replace('|', ', ')} - _{r['reason']}_")
+                
+                st.toast("✅ SVD Matrix Factorization complete!", icon="🎬")
+                
+                # --- CSV Download Feature ---
+                st.markdown("<br>", unsafe_allow_html=True)
+                df_recs = pd.DataFrame(recs)
+                csv = df_recs.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Results as CSV",
+                    data=csv,
+                    file_name="movie_recommendations.csv",
+                    mime="text/csv",
+                    type="secondary"
+                )
 
 def render_nlp():
     st.title("Sentiment Volatility Analysis")
@@ -619,6 +647,20 @@ def render_vision():
                                 st.progress(min(match['similarity_score'] / 100.0, 1.0))
                                 st.write("**Plot Snippet (from Wikipedia):**")
                                 st.caption(match['plot_snippet'])
+                        
+                        st.toast("✅ Wikipedia Semantic Analysis complete!", icon="🌐")
+                        
+                        # --- CSV Download Feature ---
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        df_wiki = pd.DataFrame(results)
+                        csv_wiki = df_wiki.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            label="📥 Download Wikipedia Matches as CSV",
+                            data=csv_wiki,
+                            file_name="wikipedia_semantic_matches.csv",
+                            mime="text/csv",
+                            type="secondary"
+                        )
                     else:
                         st.error("Could not find this movie on Wikipedia. Try the exact title (e.g., 'The Matrix' instead of 'Matrix').")
             else:
