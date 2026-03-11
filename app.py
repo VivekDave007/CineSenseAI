@@ -359,11 +359,11 @@ def render_nlp():
             with st.spinner("Thinking..."):
                 from models.nlp import SentimentAnalyzer
                 @st.cache_resource
-                def load_nlp_model():
+                def load_sentiment_model():
                     analyzer = SentimentAnalyzer()
                     analyzer.load_pretrained() 
                     return analyzer
-                nlp_model = load_nlp_model()
+                nlp_model = load_sentiment_model()
                 result = nlp_model.predict_sentiment(prompt)
                 
                 st.write("### Analysis Results")
