@@ -58,7 +58,7 @@ def main():
         This project was developed as a comprehensive Academic/Portfolio demonstration of end-to-end Machine Learning deployment.
         
         [🔗 GitHub Profile](https://github.com/VivekDave007)  
-        [💼 LinkedIn](https://linkedin.com/in/vivekdave)
+        [💼 LinkedIn](https://www.linkedin.com/in/vivek-dave-b3414b31b/)
         
         **Tech Stack:**
         - Keras (Deep Learning)
