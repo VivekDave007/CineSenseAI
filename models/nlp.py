@@ -153,15 +153,15 @@ class SentimentAnalyzer:
         
         if prob >= 0.5:
             sentiment = "Positive"
-            confidence = float(prob * 100)
+            confidence = float(prob)
         else:
             sentiment = "Negative"
-            confidence = float((1 - prob) * 100)
+            confidence = float(1.0 - prob)
             
         return {
             "prediction": sentiment,
-            "probability": confidence,
-            # LSTMs don't have linear feature importance coefficients like LogReg does,
+            "confidence": confidence,
+            # MLPs/LSTMs don't have linear feature importance coefficients like LogReg does,
             # so we cannot extract single "trigger words" linearly without complex attention layers.
             "triggers": [] 
         }
