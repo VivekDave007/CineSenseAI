@@ -226,8 +226,15 @@ class LocalEntertainmentAssistant:
                 "avg_watch_time_per_day": float(parsed["watch_hours"]) / 4.0,
             }
             result = predictor.predict_propensity(user_vector)
-            propensity = result.get('propensity', 0)
-            top_factors = result.get('top_risk_factors', [])
+            
+            # Gracefully handle both legacy tuple outputs and deep-learning dict outputs
+            if isinstance(result, tuple):
+                propensity = result[0]
+                top_factors = result[1] if len(result) > 1 else []
+            else:
+                propensity = result.get('propensity', 0)
+                top_factors = result.get('top_risk_factors', [])
+                
             text = f"Local XGBoost Churn Model: **{propensity:.1f}%** churn probability."
             tool = "churn"
 
