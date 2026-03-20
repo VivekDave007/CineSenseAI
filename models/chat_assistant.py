@@ -228,18 +228,31 @@ class LocalEntertainmentAssistant:
             result = predictor.predict_propensity(user_vector)
             
             # Gracefully handle both legacy tuple outputs and deep-learning dict outputs
-            if isinstance(result, tuple):
-                propensity = result[0]
-                top_factors = result[1] if len(result) > 1 else []
-            else:
+            if hasattr(result, "get"):
                 propensity = result.get('propensity', 0)
                 top_factors = result.get('top_risk_factors', [])
+            else:
+                propensity = result[0]
+                top_factors = result[1] if len(result) > 1 else []
                 
             text = f"Local XGBoost Churn Model: **{propensity:.1f}%** churn probability."
             tool = "churn"
 
         risk_level = "High" if propensity > 60 else "Medium" if propensity > 35 else "Low"
         text += f"\nRisk Level: **{risk_level}**."
+        
+        # --- Reinforcement Learning Bandit Injection ---
+        try:
+            from models.rl_churn import ChurnContextualBandit
+            bandit = ChurnContextualBandit()
+            action, boost, mode = bandit.prescribe_action(propensity, parsed)
+            text += f"\n\n🤖 **RL Agent Decision ({mode})**: Prescribing offer -> **{action}**"
+            if boost > 0:
+                text += f"\n*Expected Retention Reward Boost: +{boost:.1f}%*"
+            tool = "churn-rl"
+        except Exception as e:
+            text += f"\n\n*(RL Evaluation Failed: {e})*"
+            
         return self._reply(text, tool=tool, bullets=[f"Primary Factors: {', '.join(top_factors)}"])
 
     def _help_reply(self) -> dict[str, Any]:
