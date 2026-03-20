@@ -193,6 +193,50 @@ class LocalEntertainmentAssistant:
                 bullets=[f"Missing: {', '.join(missing)}", "Try: age 30, Standard sub, TV device, $15 fee, 40 watch hours, 2 days login"]
             )
 
+        # 1. Attempt Gemma Zero-Shot Prediction via LangChain API
+        if self.nvidia_api_key:
+            try:
+                from langchain_nvidia_ai_endpoints import ChatNVIDIA
+                client = ChatNVIDIA(
+                    model=self.nvidia_model,
+                    api_key=self.nvidia_api_key, 
+                    temperature=0.1,
+                    top_p=0.7,
+                    max_tokens=512,
+                )
+                
+                gemma_prompt = (
+                    "You are a Churn Prediction AI for a Netflix-style platform. Analyze this user:\n"
+                    f"- Age: {parsed.get('age')}\n"
+                    f"- Subscription: {parsed.get('subscription_type')}\n"
+                    f"- Monthly Fee: ${parsed.get('monthly_fee')}\n"
+                    f"- Watch Hours: {parsed.get('watch_hours')}\n"
+                    f"- Days Since Login: {parsed.get('last_login_days')}\n"
+                    f"- Device: {parsed.get('device')}\n\n"
+                    "Provide 1-2 short sentences of reasoning. You MUST end your response exactly with this format:\n"
+                    "Probability: [number]%"
+                )
+                
+                response = client.invoke([{"role": "user", "content": gemma_prompt}])
+                answer = response.content
+                
+                # Extract numerical probability for the RL Bandit
+                import re
+                prop_match = re.search(r"(\d+(?:\.\d+)?)%", answer)
+                propensity = float(prop_match.group(1)) if prop_match else 50.0
+                
+                text = f"**NVIDIA {self.nvidia_model.split('/')[-1].title()} Churn Prediction:**\n\n{answer}"
+                tool = "gemma-churn"
+                top_factors = ["Gemma Natural Language Analysis"]
+                
+                # Go directly to RL Bandit injection
+                return self._inject_rl_bandit_and_reply(text, tool, propensity, parsed, top_factors)
+                
+            except Exception as e:
+                print(f"Gemma Churn Error: {e}")
+                # Fallthrough to local models
+
+        # 2. Fallback to Local Models (Deep Learning or XGBoost)
         if use_dl:
             dl_churn = self._load_dl_churn()
             user_df = pd.DataFrame([{
@@ -232,12 +276,21 @@ class LocalEntertainmentAssistant:
                 propensity = result.get('propensity', 0)
                 top_factors = result.get('top_risk_factors', [])
             else:
-                propensity = result[0]
-                top_factors = result[1] if len(result) > 1 else []
+                try:
+                    propensity = float(result[0])
+                    top_factors = result[1] if len(result) > 1 else []
+                except Exception:
+                    propensity = 0
+                    top_factors = []
                 
             text = f"Local XGBoost Churn Model: **{propensity:.1f}%** churn probability."
             tool = "churn"
 
+        return self._inject_rl_bandit_and_reply(text, tool, propensity, parsed, top_factors)
+
+    def _inject_rl_bandit_and_reply(self, base_text: str, tool: str, propensity: float, parsed: dict, top_factors: list) -> dict[str, Any]:
+        """Helper to append RL instructions and format output."""
+        text = base_text
         risk_level = "High" if propensity > 60 else "Medium" if propensity > 35 else "Low"
         text += f"\nRisk Level: **{risk_level}**."
         
@@ -246,7 +299,7 @@ class LocalEntertainmentAssistant:
             from models.rl_churn import ChurnContextualBandit
             bandit = ChurnContextualBandit()
             action, boost, mode = bandit.prescribe_action(propensity, parsed)
-            text += f"\n\n🤖 **RL Agent Decision ({mode})**: Prescribing offer -> **{action}**"
+            text += f"\n\n---\n🤖 **RL Agent Decision ({mode})**: Prescribing offer -> **{action}**"
             if boost > 0:
                 text += f"\n*Expected Retention Reward Boost: +{boost:.1f}%*"
             tool = "churn-rl"
