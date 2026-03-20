@@ -74,11 +74,8 @@ To provide a visual sense of the final Streamlit machine learning application su
 ![Main Dashboard Overview](media/dashboard_overview.png)
 <br>
 
-### 2. Live Wikipedia Semantic Recommender
-![Wikipedia Semantic Recommender Results](media/wikipedia_recommender.png)
-<br>
 
-### 3. Application Interface
+### 2. Application Interface
 ![Additional Dashboard Views](media/main_dashboard.png)
 
 ## 📁 Project Structure
