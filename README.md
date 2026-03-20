@@ -1,6 +1,6 @@
 # CineSense AI & Entertainment ML Hub
 
-🔥 **Live Interactive Application:** [entertainmentmediamlapp.streamlit.app](https://entertainmentmediamlapp.streamlit.app/)
+🔥 **Live Interactive Application:** [cinesenseai.streamlit.app](https://cinesenseai.streamlit.app/)
 
 Welcome to the **CineSense AI Repository**, a complete overhaul of the classic Machine Learning dashboard into a unified, **Premium AI Assistant Chat Interface**. This project tackles the core challenges of the modern digital media landscape by exposing deep learning models through a single conversational entry point.
 
