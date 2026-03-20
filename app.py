@@ -113,11 +113,11 @@ def render_message(message: dict):
             
         # Display Plotly Charts or Heatmaps
         if message.get("chart") is not None:
-            # Handle PIL Images (Heatmaps)
-            if hasattr(message["chart"], "show") or isinstance(message["chart"], (pd.Series, pd.DataFrame)) == False:
-                 st.image(message["chart"], use_container_width=True)
-            else:
+            # Handle PIL Images vs Plotly Figures
+            if "plotly" in str(type(message["chart"])).lower():
                  st.plotly_chart(message["chart"], use_container_width=True)
+            else:
+                 st.image(message["chart"], use_container_width=True)
 
 def submit_prompt(prompt: str, image_file=None):
     assistant = get_assistant()
