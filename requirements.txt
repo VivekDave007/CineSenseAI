@@ -5,7 +5,7 @@ plotly
 scikit-learn
 xgboost
 joblib
-tensorflow-cpu
+tensorflow
 Pillow
 matplotlib
 Wikipedia-API
