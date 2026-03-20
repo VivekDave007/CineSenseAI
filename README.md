@@ -66,6 +66,21 @@ graph TD
     UI1 -.->|"General Query Fallback"| LLM1
 ```
 
+## 📸 Dashboard Output Screenshots
+
+To provide a visual sense of the final Streamlit machine learning application suite:
+
+### 1. Main Dashboard & Data Viz Hub
+![Main Dashboard Overview](media/dashboard_overview.png)
+<br>
+
+### 2. Live Wikipedia Semantic Recommender
+![Wikipedia Semantic Recommender Results](media/wikipedia_recommender.png)
+<br>
+
+### 3. Application Interface
+![Additional Dashboard Views](media/main_dashboard.png)
+
 ## 📁 Project Structure
 
 ```text
