@@ -32,7 +32,7 @@ class LocalEntertainmentAssistant:
         self._dl_churn = None
         self._eda_df = None
         self.nvidia_base_url = os.getenv("NVIDIA_API_BASE_URL", "https://integrate.api.nvidia.com/v1")
-        self.nvidia_model = os.getenv("NVIDIA_API_MODEL", "google/gemma-2-27b-it")
+        self.nvidia_model = os.getenv("NVIDIA_API_MODEL", "google/gemma-3-1b-it")
         self.nvidia_api_key = os.getenv("NVIDIA_API_KEY")
         
         self.project_keywords = {
@@ -340,27 +340,20 @@ class LocalEntertainmentAssistant:
         
         if self.nvidia_api_key:
             try:
-                response = requests.post(
-                    f"{self.nvidia_base_url.rstrip('/')}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.nvidia_api_key}", "Content-Type": "application/json"},
-                    json={
-                        "model": self.nvidia_model,
-                        "messages": [
-                            {"role": "system", "content": "You are CineSense AI, a helpful entertainment assistant."},
-                            {"role": "user", "content": message}
-                        ],
-                        "max_tokens": 1024,
-                        "temperature": 0.2,
-                        "top_p": 0.7
-                    },
-                    timeout=30
+                from langchain_nvidia_ai_endpoints import ChatNVIDIA
+                client = ChatNVIDIA(
+                    model=self.nvidia_model,
+                    api_key=self.nvidia_api_key, 
+                    temperature=0.1,
+                    top_p=0.7,
+                    max_tokens=512,
                 )
-                response.raise_for_status()
-                answer = response.json()["choices"][0]["message"]["content"]
+                response = client.invoke([{"role":"user","content": message}])
+                answer = response.content
                 bullets.append(f"Answered via NVIDIA API model: {self.nvidia_model}")
                 tool_used = "nvidia-fallback"
-            except Exception:
-                pass 
+            except Exception as e:
+                print(f"ChatNVIDIA API Error: {e}") 
 
         if not answer:
             answer = "I am **CineSense AI**. I couldn't reach the external APIs for general questions right now. Please stick to local tool queries like movie recommendations, churn, or sentiment analysis."
