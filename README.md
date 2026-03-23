@@ -132,6 +132,7 @@ Entertainment_Media_ML_Hub/
      - [Netflix Churn Dataset](https://www.kaggle.com/datasets/abdulwadood11220/netflix-customer-churn-dataset) -> `data/archive_2/`
      - [IMDb 50K Dataset](https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews) -> `data/archive_3/`
      - [MovieLens 1M Dataset](https://www.kaggle.com/datasets/odedgolden/movielens-1m-dataset) -> `data/archive_4/`
+     - [IMDb Non-Commercial Datasets](https://datasets.imdbws.com/) -> `data/` (Extract TSVs into corresponding folders)
 
 3. **Configure API Fallbacks (Optional)**:
    - Create a `.env` file in the root directory.

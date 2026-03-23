@@ -17,6 +17,8 @@ data/archive_2/*
 data/archive_3/*
 data/archive_4/*
 data/archive_5/*
+data/**/*.tsv
+**/*.tsv
 !data/archive_2/.gitkeep
 !data/archive_3/.gitkeep
 !data/archive_4/.gitkeep
