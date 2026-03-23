@@ -11,4 +11,5 @@ matplotlib
 Wikipedia-API
 python-dotenv
 requests
-langchain_nvidia_ai_endpoints
+openai
+

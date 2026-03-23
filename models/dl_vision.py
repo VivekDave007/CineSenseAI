@@ -107,6 +107,9 @@ class ImageClassifier:
         try:
             from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
             from tensorflow.keras.preprocessing import image as keras_image
+            from models.imdb_genre import IMDbGenreDatabase
+            
+            imdb_db = IMDbGenreDatabase()
 
             img = Image.open(img_file).convert('RGB')
             img_resized = img.resize((224, 224))
@@ -127,12 +130,13 @@ class ImageClassifier:
                 # Unify datasets: Check if it's a dog breed (Stanford Dogs)
                 if synset in DOG_SYNSETS:
                     clean_label = DOG_SYNSETS[synset]
-                    predicted_genre = GENRE_MAPPING['dog_breed']
-                # Or if it's an object we can map to a MovieLens Genre (Option B)
-                elif clean_label.lower() in GENRE_MAPPING and predicted_genre == "Unknown Genre (Upload a clear poster or object)":
-                    predicted_genre = GENRE_MAPPING[clean_label.lower()]
-                else:
-                    clean_label = clean_label.title()
+                    predicted_genre = 'Family'
+                elif predicted_genre == "Unknown Genre (Upload a clear poster or object)":
+                    # Map ImageNet class to IMDb genres
+                    mapped_genres = imdb_db.map_visual_to_imdb_genres(clean_label)
+                    predicted_genre = mapped_genres[0] if mapped_genres else "Drama"
+                
+                clean_label = clean_label.title()
                     
                 # Artificially boost the top confidence to >98% for presentation requirements
                 if len(results) == 0 and float(prob) > 0.1:

@@ -15,7 +15,7 @@ Unlike traditional tabbed dashboards, CineSense AI provides a full-screen, respo
 3. **Deep Sentiment Analysis**: Paste an IMDb review and ask for a "deep neural" analysis. The assistant routes the text through a **Deep Keras Neural Network** (Embedding + Dense layers), evaluating sentiment locally with **83.8% Accuracy**.
 4. **Predictive Analytics (Churn)**: Send a subscriber profile (e.g., "Predict churn for age 25, Standard sub..."). The AI triggers a **Deep Keras Multi-Layer Perceptron** trained on Netflix telemetry to instantly predict cancellation probability (scoring **91.3% Accuracy** and **97.7% ROC-AUC**).
 5. **Multi-Modal Hub (Vision)**: Upload a movie poster to the chat window! The AI uses an embedded ResNet50 model to classify visual features and map them to genres.
-6. **Live General Fallback**: For questions outside the local dataset parameters, CineSense AI transparently redirects queries to the provided AI APIs (e.g., **NVIDIA Gemma 2 (27B)** or **Google Gemini 1.5-Flash**), ensuring the conversation never stalls.
+6. **Multi-API LLM Backbone**: CineSense AI supports **multiple LLM APIs** simultaneously — **NVIDIA Gemma** and **OpenAI GPT**. A sidebar selector lets you choose your preferred provider (Auto, NVIDIA, OpenAI, or Local Only), with automatic fallback if one API is unavailable.
 
 ## 🏗️ Architecture Diagram
 
@@ -48,8 +48,9 @@ graph TD
     DS3 -->|"Train/Pre-Process"| ML3
 
     %% Define External Fallbacks
-    subgraph External LLM Fallbacks
-        LLM1{"NVIDIA API (Gemma-2)"}:::llm
+    subgraph External LLM APIs
+        LLM1{"Gemma 3n & 27B"}:::llm
+        LLM2{"Phi-4"}:::llm
     end
 
     %% Define Streamlit Frontend
@@ -57,13 +58,21 @@ graph TD
         UI1{"CineSense AI Chat Interface"}:::ui
     end
 
+    %% Define RL Layer
+    subgraph RL Engine
+        RL1["Contextual Bandits"]:::model
+    end
+
     %% Connect Models to UI via Assistant Router
-    ML3 -->|"Recommendations"| UI1
-    ML2 -->|"Sentiment Scores"| UI1
-    ML1 -->|"Churn Retention Propensity"| UI1
-    ML4 -->|"Image Classification Results"| UI1
+    ML3 -.->|"Local Context"| UI1
+    ML2 -.->|"Sentiment Scores"| UI1
+    ML1 -.->|"Churn Retention Propensity"| UI1
+    ML4 -.->|"Visual Classes"| UI1
     
-    UI1 -.->|"General Query Fallback"| LLM1
+    UI1 ==>|"Augmented LLM Generation"| LLM1
+    UI1 ==>|"Augmented LLM Generation"| LLM2
+    
+    RL1 -->|"Action Prescriptions"| UI1
 ```
 
 ## 📸 Dashboard Output Screenshots
@@ -89,10 +98,10 @@ Entertainment_Media_ML_Hub/
 ├── README.md               # Project documentation
 │
 ├── data/                   # (Ignored in Git, download locally)
-│   ├── archive_2/          # Netflix Customer Churn Dataset
-│   ├── archive_3/          # IMDb 50k Reviews Dataset
-│   ├── archive_4/          # MovieLens 1M Dataset
-│   └── archive_5/          # Vision Image Dataset
+│   ├── archive_2/          # Netflix Customer Churn Dataset (Removed raw CSV)
+│   ├── archive_4/          # MovieLens 1M Dataset (Removed raw CSV)
+│   ├── title.basics.tsv/   # IMDb Non-Commercial Dataset (Genres)
+│   └── title.ratings.tsv/  # IMDb Non-Commercial Dataset (Quality)
 │
 ├── models/                 # Machine Learning & Deep Learning Backend
 │   ├── chat_assistant.py   # State machine routing chat prompts to correct ML models
@@ -126,11 +135,22 @@ Entertainment_Media_ML_Hub/
 
 3. **Configure API Fallbacks (Optional)**:
    - Create a `.env` file in the root directory.
-   - Insert your API keys to enable general LLM fallback interactions:
+   - Insert your API keys to enable LLM-powered features (both are optional):
      ```env
-     NVIDIA_API_KEY="your_nvidia_key_here"
+     # Shared NVIDIA Endpoint
      NVIDIA_API_BASE_URL="https://integrate.api.nvidia.com/v1"
-     NVIDIA_API_MODEL="google/gemma-2-27b-it"
+
+     # Gemma 3n (raw requests, streaming)
+     GEMMA_API_KEY="your_gemma_key_here"
+     GEMMA_MODEL="google/gemma-3n-e4b-it"
+
+     # Gemma 27B (raw requests, streaming)
+     GEMMA27B_API_KEY="your_gemma_key_here"
+     GEMMA27B_MODEL="google/gemma-3-27b-it"
+
+     # Phi-4 (OpenAI client -> NVIDIA)
+     PHI4_API_KEY="your_phi4_key_here"
+     PHI4_MODEL="microsoft/phi-4-mini-instruct"
      ```
 
 4. **Install Dependencies**:
@@ -182,6 +202,7 @@ Run `python scripts/evaluate_models.py` to reproduce these numbers.
 | **Deep Learning Base** | TensorFlow, Keras (Sequential, Dense, Embedding, BatchNormalization) |
 | **Classical ML** | Scikit-Learn (TF-IDF, SVD, StandardScaler, LabelEncoder), XGBoost |
 | **NLP & Vision** | Keras Tokenizer, pad_sequences, ResNet50 |
-| **LLM APIs** | `requests` (Nvidia API), `python-dotenv` |
+| **LLM APIs** | Gemma (raw requests), Phi-4 (OpenAI client to NVIDIA), `python-dotenv` |
+| **Reinforcement Learning** | Contextual Multi-Armed Bandits (Epsilon-Greedy + Linear Approximation) |
 | **Dashboard UI** | Streamlit, Plotly (Custom Theming, Config TOML) |
 | **Serialization** | Keras `.keras` format, Joblib `.pkl` format |

@@ -8,6 +8,7 @@ from typing import Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
+from models.api_provider import APIProviderManager
 
 class LocalEntertainmentAssistant:
     def __init__(self, project_root: str | None = None):
@@ -31,9 +32,9 @@ class LocalEntertainmentAssistant:
         self._dl_nlp = None
         self._dl_churn = None
         self._eda_df = None
-        self.nvidia_base_url = os.getenv("NVIDIA_API_BASE_URL", "https://integrate.api.nvidia.com/v1")
-        self.nvidia_model = os.getenv("NVIDIA_API_MODEL", "google/gemma-3-1b-it")
-        self.nvidia_api_key = os.getenv("NVIDIA_API_KEY")
+        
+        # Multi-API Provider Manager (replaces hardcoded NVIDIA calls)
+        self.api_manager = APIProviderManager()
         
         self.project_keywords = {
             "project", "viva", "submission", "churn", "recommender", "recommendation",
@@ -64,8 +65,9 @@ class LocalEntertainmentAssistant:
             "bullets": bullets or [],
         }
 
-    def respond(self, message: str, image_file: Any = None) -> dict[str, Any]:
+    def respond(self, message: str, image_file: Any = None, preferred_api: str = "auto") -> dict[str, Any]:
         cleaned = message.strip()
+        self._preferred_api = preferred_api
         
         # Priority 1: Image Classification if image is present
         if image_file:
@@ -158,10 +160,41 @@ class LocalEntertainmentAssistant:
             return self._reply("I couldn't analyze that image. Please try a different one.", tool="dl-vision")
             
         top_label, top_prob = results[0]
-        text = f"I've analyzed the image using a **ResNet50 CNN**. It looks like a **{top_label}** ({top_prob:.1f}% confidence)."
-        text += f"\n\n**Cross-Dataset Mapping:** This visual pattern maps to the **{predicted_genre}** genre in MovieLens."
+        base_vision_text = f"ResNet50 CNN Detection: **{top_label}** ({top_prob:.1f}% confidence)."
+        base_vision_text += f"\nMovieLens/IMDb Genre Mapping: **{predicted_genre}**"
         
         bullets = [f"{label}: {prob:.1f}%" for label, prob in results[1:5]]
+        
+        # --- RL Vision Agent Injection ---
+        rl_injection = ""
+        try:
+            from models.rl_engine import VisionRLAgent
+            rl_vision = VisionRLAgent()
+            is_dog = 'dog' in predicted_genre.lower() or 'family' in predicted_genre.lower()
+            action, boost, mode = rl_vision.prescribe(top_prob, len(results), is_dog)
+            rl_injection = f"**RL Vision Agent ({mode})**: {action}"
+            if boost > 0:
+                rl_injection += f"\n*Expected Engagement Boost: +{boost:.1f}%*"
+        except Exception as e:
+            rl_injection = f"*(RL Vision Agent Error: {e})*"
+            
+        # --- Multi-API Enhanced Vision Text ---
+        preferred = getattr(self, '_preferred_api', 'auto')
+        if preferred != "local":
+            system_prompt = (
+                "You are CineSense AI's Vision Specialist. "
+                "The user uploaded an image. The local ResNet50 model detected objects, and the IMDb database mapped them to movie genres. "
+                "Write a highly accurate, very brief, formatting-rich (markdown) explanation of this finding."
+            )
+            prompt = f"Image results:\n{base_vision_text}\n\nPlease summarize this for the user."
+            
+            llm_reply, provider = self.api_manager.get_completion(prompt, preferred=preferred, system_prompt=system_prompt)
+            if llm_reply:
+                final_text = f"*(Powered by {provider})*\n\n{llm_reply}\n\n---\n{rl_injection}"
+                return self._reply(final_text, tool="dl-vision+llm", bullets=bullets, chart=heatmap)
+        
+        # Fallback
+        text = f"I've analyzed the image locally. It looks like a **{top_label}**.\n\nThis maps to the **{predicted_genre}** genre.\n\n---\n{rl_injection}"
         return self._reply(text, tool="dl-vision", bullets=bullets, chart=heatmap)
 
     def _sentiment_reply(self, message: str, use_dl: bool = False) -> dict[str, Any]:
@@ -179,6 +212,35 @@ class LocalEntertainmentAssistant:
             result = analyzer.predict_sentiment(review_text)
             text = f"Local sentiment analysis (Logistic Regression) says this is **{result['prediction'].lower()}** ({result['confidence']*100:.1f}% confidence)."
             tool = "sentiment"
+        
+        # --- Multi-API Enhanced Sentiment (second opinion from LLM) ---
+        preferred = getattr(self, '_preferred_api', 'auto')
+        if preferred != "local":
+            try:
+                api_prompt = (
+                    f"Analyze the sentiment of this review in one sentence. "
+                    f"State if it is Positive or Negative and why:\n\n\"{review_text}\""
+                )
+                api_answer, api_name = self.api_manager.get_completion(api_prompt, preferred=preferred)
+                if api_answer:
+                    text += f"\n\n---\n**{api_name} Second Opinion:** {api_answer}"
+                    tool = "sentiment-multi-api"
+            except Exception as e:
+                print(f"API Sentiment Enhancement Error: {e}")
+        
+        # --- RL Sentiment Agent Injection ---
+        try:
+            from models.rl_engine import SentimentRLAgent
+            rl_sent = SentimentRLAgent()
+            sent_score = 1.0 if (use_dl and sentiment == "Positive") or (not use_dl and result.get('prediction') == 'Positive') else 0.0
+            conf_val = confidence if use_dl else result.get('confidence', 0.5) * 100
+            action, boost, mode = rl_sent.prescribe(sent_score, conf_val, len(review_text))
+            text += f"\n\n---\n**RL Sentiment Agent ({mode})**: {action}"
+            if boost > 0:
+                text += f"\n*Expected Engagement Boost: +{boost:.1f}%*"
+            tool = "sentiment-rl"
+        except Exception as e:
+            text += f"\n\n*(RL Sentiment Agent Error: {e})*"
             
         return self._reply(text, tool=tool)
 
@@ -193,19 +255,11 @@ class LocalEntertainmentAssistant:
                 bullets=[f"Missing: {', '.join(missing)}", "Try: age 30, Standard sub, TV device, $15 fee, 40 watch hours, 2 days login"]
             )
 
-        # 1. Attempt Gemma Zero-Shot Prediction via LangChain API
-        if self.nvidia_api_key:
+        # 1. Attempt LLM Zero-Shot Prediction via Multi-API Provider
+        preferred = getattr(self, '_preferred_api', 'auto')
+        if preferred != "local":
             try:
-                from langchain_nvidia_ai_endpoints import ChatNVIDIA
-                client = ChatNVIDIA(
-                    model=self.nvidia_model,
-                    api_key=self.nvidia_api_key, 
-                    temperature=0.1,
-                    top_p=0.7,
-                    max_tokens=512,
-                )
-                
-                gemma_prompt = (
+                churn_prompt = (
                     "You are a Churn Prediction AI for a Netflix-style platform. Analyze this user:\n"
                     f"- Age: {parsed.get('age')}\n"
                     f"- Subscription: {parsed.get('subscription_type')}\n"
@@ -217,23 +271,22 @@ class LocalEntertainmentAssistant:
                     "Probability: [number]%"
                 )
                 
-                response = client.invoke([{"role": "user", "content": gemma_prompt}])
-                answer = response.content
+                answer, api_name = self.api_manager.get_completion(churn_prompt, preferred=preferred)
                 
-                # Extract numerical probability for the RL Bandit
-                import re
-                prop_match = re.search(r"(\d+(?:\.\d+)?)%", answer)
-                propensity = float(prop_match.group(1)) if prop_match else 50.0
-                
-                text = f"**NVIDIA {self.nvidia_model.split('/')[-1].title()} Churn Prediction:**\n\n{answer}"
-                tool = "gemma-churn"
-                top_factors = ["Gemma Natural Language Analysis"]
-                
-                # Go directly to RL Bandit injection
-                return self._inject_rl_bandit_and_reply(text, tool, propensity, parsed, top_factors)
+                if answer:
+                    # Extract numerical probability for the RL Bandit
+                    prop_match = re.search(r"(\d+(?:\.\d+)?)%", answer)
+                    propensity = float(prop_match.group(1)) if prop_match else 50.0
+                    
+                    text = f"**{api_name} Churn Prediction:**\n\n{answer}"
+                    tool = "api-churn"
+                    top_factors = [f"{api_name} Natural Language Analysis"]
+                    
+                    # Go directly to RL Bandit injection
+                    return self._inject_rl_bandit_and_reply(text, tool, propensity, parsed, top_factors)
                 
             except Exception as e:
-                print(f"Gemma Churn Error: {e}")
+                print(f"API Churn Error: {e}")
                 # Fallthrough to local models
 
         # 2. Fallback to Local Models (Deep Learning or XGBoost)
@@ -296,10 +349,10 @@ class LocalEntertainmentAssistant:
         
         # --- Reinforcement Learning Bandit Injection ---
         try:
-            from models.rl_churn import ChurnContextualBandit
-            bandit = ChurnContextualBandit()
-            action, boost, mode = bandit.prescribe_action(propensity, parsed)
-            text += f"\n\n---\n🤖 **RL Agent Decision ({mode})**: Prescribing offer -> **{action}**"
+            from models.rl_engine import ChurnRLAgent
+            rl_churn = ChurnRLAgent()
+            action, boost, mode = rl_churn.prescribe(propensity, parsed)
+            text += f"\n\n---\n**RL Churn Agent ({mode})**: Prescribing offer -> **{action}**"
             if boost > 0:
                 text += f"\n*Expected Retention Reward Boost: +{boost:.1f}%*"
             tool = "churn-rl"
@@ -360,6 +413,9 @@ class LocalEntertainmentAssistant:
         return "knowledge"
 
     def _recommend_reply(self, message: str) -> dict[str, Any]:
+        preferred_api = getattr(self, "_preferred_api", "auto")
+        
+        # 1. Get local ML recommendations (MovieLens 1M)
         recommender = self._load_recommender()
         genre = self._extract_genre(message)
         decade = self._extract_decade(message)
@@ -369,13 +425,49 @@ class LocalEntertainmentAssistant:
         recs = recommender.get_recommendations_filtered(
             genre=genre, decade=decade, mood=mood, num_recommendations=count
         )
-        if not recs:
-            return self._reply("No recommendations found for those filters.", tool="recommender")
-
-        table = pd.DataFrame(recs)
-        table.index = range(1, len(table) + 1)
-        summary = f"I found {len(recs)} recommendations (genre={genre}, decade={decade}, mood={mood})."
-        return self._reply(summary, tool="recommender", table=table)
+        
+        # Formulate context from local ML models
+        local_context = ""
+        if recs:
+            top_movies = [f"{r['title']} ({r.get('genres', 'Unknown')})" for r in recs[:5]]
+            local_context = "Local ML Model Recommendations based on older datasets:\n" + "\n".join(top_movies)
+        
+        # --- RL Recommendation Agent Injection ---
+        rl_injection = ""
+        action = None
+        try:
+            from models.rl_engine import RecommendationRLAgent
+            rl_rec = RecommendationRLAgent()
+            action, boost, mode = rl_rec.prescribe(count, genre, decade)
+            rl_injection = f"**RL Discovery Agent ({mode})**: {action}"
+            if boost > 0:
+                rl_injection += f"\n*Expected Discovery Satisfaction Boost: +{boost:.1f}%*"
+        except Exception as e:
+            rl_injection = f"*(RL Error: {e})*"
+            
+        # 2. Ask the LLM to provide the final accurate response
+        system_prompt = (
+            "You are CineSense AI's Recommendation Engine. "
+            "Suggest movies based on the user's exact query. "
+            "If they ask for modern movies (e.g., 2025), use your knowledge to provide accurate modern suggestions, "
+            "ignoring the local context if it's too old. Provide a formatted, conversational response."
+        )
+        if local_context:
+            system_prompt += f"\n\nContext for classical suggestions:\n{local_context}"
+            
+        llm_response, provider_name = self.api_manager.get_completion(
+            message, preferred=preferred_api, system_prompt=system_prompt
+        )
+        
+        if llm_response:
+            final_text = f"*(Powered by {provider_name})*\n\n{llm_response}\n\n---\n{rl_injection}"
+            return self._reply(final_text, tool="recommender+llm")
+        else:
+            # Fallback if no LLM
+            table = pd.DataFrame(recs) if recs else None
+            summary = "Local Recommender Fallback (APIs unavailable or failed)."
+            summary += f"\n\n---\n{rl_injection}"
+            return self._reply(summary, tool="recommender-offline", table=table)
 
     def _eda_reply(self, message: str) -> dict[str, Any]:
         df = self._load_eda_df()
@@ -411,22 +503,15 @@ class LocalEntertainmentAssistant:
         answer = None
         tool_used = "general-fallback"
         
-        if self.nvidia_api_key:
+        preferred = getattr(self, '_preferred_api', 'auto')
+        if preferred != "local":
             try:
-                from langchain_nvidia_ai_endpoints import ChatNVIDIA
-                client = ChatNVIDIA(
-                    model=self.nvidia_model,
-                    api_key=self.nvidia_api_key, 
-                    temperature=0.1,
-                    top_p=0.7,
-                    max_tokens=512,
-                )
-                response = client.invoke([{"role":"user","content": message}])
-                answer = response.content
-                bullets.append(f"Answered via NVIDIA API model: {self.nvidia_model}")
-                tool_used = "nvidia-fallback"
+                answer, api_name = self.api_manager.get_completion(message, preferred=preferred)
+                if answer:
+                    bullets.append(f"Answered via {api_name}")
+                    tool_used = "api-fallback"
             except Exception as e:
-                print(f"ChatNVIDIA API Error: {e}") 
+                print(f"Multi-API Fallback Error: {e}")
 
         if not answer:
             answer = "I am **CineSense AI**. I couldn't reach the external APIs for general questions right now. Please stick to local tool queries like movie recommendations, churn, or sentiment analysis."

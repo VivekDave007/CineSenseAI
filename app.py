@@ -10,84 +10,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Premium Design System (Inter/Outfit fonts, Glassmorphism, Vibrant Gradients)
+# Premium Design System
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-    * {
-        font-family: 'Outfit', sans-serif;
-    }
-    
-    .stApp {
-        background: radial-gradient(circle at top right, var(--secondary-background-color) 0%, var(--background-color) 100%);
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: transparent !important;
-        backdrop-filter: blur(10px);
-        border-right: 1px solid var(--secondary-background-color);
-    }
-
-    .stChatMessage {
-        background-color: var(--secondary-background-color) !important;
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        border-radius: 15px !important;
-        padding: 1rem !important;
-        margin-bottom: 1rem !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-
-    .stChatMessage[data-testid="stChatMessageUser"] {
-        background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%) !important;
-        border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-
-    .hero-container {
-        text-align: center;
-        padding: 2rem 1rem;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 1rem;
-    }
-
-    h1 {
-        font-weight: 700 !important;
-        letter-spacing: -0.02em;
-    }
-
-    .metric-card {
-        background: var(--secondary-background-color);
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        padding: 1rem;
-        border-radius: 12px;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .metric-value {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #3b82f6;
-    }
-
-    .metric-label {
-        font-size: 0.8rem;
-        opacity: 0.7;
-    }
-    
-    /* Smooth Transitions */
-    .stButton>button {
-        transition: all 0.3s ease;
-        border-radius: 8px !important;
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-    }
+    * { font-family: 'Outfit', sans-serif; }
+    .stApp { background: radial-gradient(circle at top right, var(--secondary-background-color) 0%, var(--background-color) 100%); }
+    [data-testid="stSidebar"] { background-color: transparent !important; backdrop-filter: blur(10px); border-right: 1px solid var(--secondary-background-color); }
+    .stChatMessage { background-color: var(--secondary-background-color) !important; backdrop-filter: blur(8px); border: 1px solid rgba(128,128,128,0.2); border-radius: 15px !important; padding: 1rem !important; margin-bottom: 1rem !important; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .stChatMessage[data-testid="stChatMessageUser"] { background: radial-gradient(circle at top left, rgba(59,130,246,0.1) 0%, rgba(37,99,235,0.05) 100%) !important; border: 1px solid rgba(59,130,246,0.2); }
+    .hero-container { text-align: center; padding: 2rem 1rem; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+    h1 { font-weight: 700 !important; letter-spacing: -0.02em; }
+    .metric-card { background: var(--secondary-background-color); border: 1px solid rgba(128,128,128,0.2); padding: 1rem; border-radius: 12px; text-align: center; margin-bottom: 0.5rem; }
+    .metric-value { font-size: 1.5rem; font-weight: 600; color: #3b82f6; }
+    .metric-label { font-size: 0.8rem; opacity: 0.7; }
+    .stButton>button { transition: all 0.3s ease; border-radius: 8px !important; }
+    .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,22 +38,13 @@ def get_assistant() -> LocalEntertainmentAssistant:
 def render_message(message: dict):
     with st.chat_message(message["role"]):
         st.markdown(message["text"])
-        
-        # Display Tool Identifier
         if message.get("tool") and message["tool"] != "assistant":
-            st.caption(f"🛠️ Tool: {message['tool']}")
-            
-        # Display Bullets
+            st.caption(f"Tool: {message['tool']}")
         for bullet in message.get("bullets", []):
             st.markdown(f"- {bullet}")
-            
-        # Display DataFrames
         if message.get("table") is not None:
             st.dataframe(message["table"], use_container_width=True)
-            
-        # Display Plotly Charts or Heatmaps
         if message.get("chart") is not None:
-            # Handle PIL Images vs Plotly Figures
             if "plotly" in str(type(message["chart"])).lower():
                  st.plotly_chart(message["chart"], use_container_width=True)
             else:
@@ -121,20 +52,16 @@ def render_message(message: dict):
 
 def submit_prompt(prompt: str, image_file=None):
     assistant = get_assistant()
-    # Add user message to history
     user_entry = {"role": "user", "text": prompt}
     st.session_state.messages.append(user_entry)
-    
-    # Generate assistant response
+    preferred_api = st.session_state.get("api_provider", "auto")
     with st.spinner("AI is thinking..."):
-        reply = assistant.respond(prompt, image_file=image_file)
-    
+        reply = assistant.respond(prompt, image_file=image_file, preferred_api=preferred_api)
     st.session_state.messages.append(reply)
 
 def main():
     assistant = get_assistant()
     
-    # Initialize session state
     if "messages" not in st.session_state:
         st.session_state.messages = [{
             "role": "assistant",
@@ -153,12 +80,39 @@ def main():
         st.title("CineSense AI")
         st.markdown("---")
         
+        # --- Model Performance ---
         st.subheader("Model Performance")
         cols = st.columns(2)
         metrics = assistant.metrics
         cols[0].markdown(f'<div class="metric-card"><div class="metric-value">{metrics["dl_churn_accuracy"]:.1%}</div><div class="metric-label">Churn DL</div></div>', unsafe_allow_html=True)
         cols[1].markdown(f'<div class="metric-card"><div class="metric-value">{metrics["dl_sentiment_accuracy"]:.1%}</div><div class="metric-label">Sent. DL</div></div>', unsafe_allow_html=True)
         
+        # --- API Provider Selector (right under Model Performance) ---
+        st.markdown("---")
+        st.subheader("API Provider")
+        api_options = {
+            "auto": "Auto (Best Available)",
+            "gemma": "Gemma 3n (gemma-3n-e4b-it)",
+            "gemma27b": "Gemma 27B (gemma-3-27b-it)",
+            "phi4": "Phi-4 (phi-4-mini-instruct)",
+        }
+        available_apis = assistant.api_manager.list_available()
+        api_status = []
+        for key_name, display_name in [("gemma", "Gemma 3n"), ("gemma27b", "Gemma 27B"), ("phi4", "Phi-4")]:
+            status_icon = "[+]" if key_name in available_apis else "[-]"
+            api_status.append(f"{status_icon} {display_name}")
+        st.caption(f"Keys: {' | '.join(api_status)}")
+        
+        selected = st.radio(
+            "Choose provider:",
+            options=list(api_options.keys()),
+            format_func=lambda x: api_options[x],
+            index=0,
+            key="api_provider",
+            label_visibility="collapsed"
+        )
+        
+        # --- Try a Prompt ---
         st.markdown("---")
         st.subheader("Try a Prompt")
         for starter in assistant.starter_prompts():
@@ -171,7 +125,7 @@ def main():
             st.session_state.messages = st.session_state.messages[:1]
             st.rerun()
 
-        st.caption("v2.0.0 | Local AI Engine")
+        st.caption("v3.1.0 | Multi-API + RL + IMDb Engine")
 
     # Main Header
     st.markdown('<div class="hero-container"><h1>CineSense AI</h1></div>', unsafe_allow_html=True)
@@ -185,8 +139,7 @@ def main():
     # Input Area
     st.markdown("---")
     
-    # Multimodal: Image Upload for Vision
-    with st.expander("📷 Upload Image for Vision Classification", expanded=False):
+    with st.expander("Upload Image for Vision Classification", expanded=False):
         uploaded_image = st.file_uploader("Upload a movie poster or object...", type=["jpg", "png", "jpeg"])
         if uploaded_image and st.button("Analyze Uploaded Image"):
             submit_prompt("Analyzing uploaded image...", image_file=uploaded_image)
@@ -198,5 +151,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
