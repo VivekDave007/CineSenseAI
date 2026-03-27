@@ -125,7 +125,7 @@ def main():
             st.session_state.messages = st.session_state.messages[:1]
             st.rerun()
 
-        st.caption("v3.1.0 | Multi-API + RL + IMDb Engine")
+        st.caption("v4.0.0 | Multi-API + SSL + TMDB Engine")
 
     # Main Header
     st.markdown('<div class="hero-container"><h1>CineSense AI</h1></div>', unsafe_allow_html=True)

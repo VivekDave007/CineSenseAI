@@ -16,13 +16,18 @@ __pycache__/
 data/archive_2/*
 data/archive_3/*
 data/archive_4/*
-data/archive_5/*
-data/**/*.tsv
-**/*.tsv
+data/archive (6)/*
 !data/archive_2/.gitkeep
 !data/archive_3/.gitkeep
 !data/archive_4/.gitkeep
-!data/archive_5/.gitkeep
+!data/archive (6)/.gitkeep
+
+# Cloned external datasets (too large for Git)
+data/Poster100K/
+data/IMDb-Face/
+data/lfw/
+lfw.tgz
+data/tmdb_movies.csv
 
 # Models are small enough to be tracked by GitHub (under 100MB)
 !models/.gitkeep

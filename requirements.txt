@@ -3,7 +3,6 @@ pandas
 numpy<2.0.0
 plotly
 scikit-learn
-xgboost
 joblib
 tensorflow
 Pillow
@@ -12,4 +11,4 @@ Wikipedia-API
 python-dotenv
 requests
 openai
-
+huggingface_hub

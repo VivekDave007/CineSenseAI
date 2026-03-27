@@ -1,24 +1,20 @@
 """
 IMDb Genre Database for CineSense AI Vision Classification.
-Loads movie genres from IMDb non-commercial datasets (title.basics.tsv + title.ratings.tsv)
+Loads movie genres from TMDB API or cached data
 and provides genre lookup + enriched genre mapping for image classification.
 """
 import os
-import csv
 import joblib
 import numpy as np
 
 
 class IMDbGenreDatabase:
     """
-    Loads and caches a lightweight genre database from IMDb's title.basics.tsv.
-    Filters to movies only with >1000 votes for quality.
+    Loads and caches a lightweight genre database from TMDB API or cached data.
     Provides genre frequency analysis for enriching Vision Classification.
     """
     
     CACHE_PATH = "models/imdb_genre_cache.pkl"
-    BASICS_PATH = "data/title.basics.tsv/title.basics.tsv"
-    RATINGS_PATH = "data/title.ratings.tsv/title.ratings.tsv"
     
     def __init__(self):
         self.genre_counts = {}      # {genre: count}
@@ -27,7 +23,7 @@ class IMDbGenreDatabase:
         self.is_loaded = False
     
     def load(self):
-        """Load from cache or build from raw TSV."""
+        """Load from cache or build from TMDB API."""
         if os.path.exists(self.CACHE_PATH):
             try:
                 cache = joblib.load(self.CACHE_PATH)
@@ -39,94 +35,69 @@ class IMDbGenreDatabase:
             except Exception as e:
                 print(f"Cache load failed: {e}")
         
-        return self._build_from_tsv()
+        return self._build_from_tmdb()
     
-    def _build_from_tsv(self):
-        """Parse title.basics.tsv + title.ratings.tsv to build genre database."""
-        if not os.path.exists(self.BASICS_PATH):
-            print(f"IMDb data not found at {self.BASICS_PATH}")
-            return False
+    def _build_from_tmdb(self):
+        """Build genre database from TMDB API or use built-in fallback."""
+        print("Building genre database...")
         
-        print("Building IMDb genre database from title.basics.tsv...")
-        
-        # Step 1: Load ratings for quality filtering
-        ratings = {}
-        if os.path.exists(self.RATINGS_PATH):
-            with open(self.RATINGS_PATH, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f, delimiter='\t')
-                for row in reader:
-                    try:
-                        num_votes = int(row.get('numVotes', 0))
-                        if num_votes >= 1000:  # Quality filter
-                            ratings[row['tconst']] = {
-                                'rating': float(row.get('averageRating', 0)),
-                                'votes': num_votes
-                            }
-                    except (ValueError, KeyError):
+        try:
+            from data.tmdb_fetcher import fetch_movies
+            df = fetch_movies(pages=5)
+            if not df.empty:
+                genre_counts = {}
+                genre_combos = {}
+                movies_by_genre = {}
+                
+                for _, row in df.iterrows():
+                    genres_str = str(row.get('genres', ''))
+                    if not genres_str or genres_str == 'nan':
                         continue
-        
-        print(f"  Loaded {len(ratings)} rated titles (1000+ votes)")
-        
-        # Step 2: Parse title.basics.tsv for movies
-        genre_counts = {}
-        genre_combos = {}
-        movies_by_genre = {}  # genre -> [(title, rating, year)]
-        
-        with open(self.BASICS_PATH, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f, delimiter='\t')
-            count = 0
-            for row in reader:
-                title_type = row.get('titleType', '')
-                genres_str = row.get('genres', '\\N')
-                
-                # Filter: movies only, with valid genres
-                if title_type != 'movie' or genres_str == '\\N':
-                    continue
-                
-                tconst = row.get('tconst', '')
-                title = row.get('primaryTitle', 'Unknown')
-                year = row.get('startYear', '\\N')
-                
-                genres = [g.strip() for g in genres_str.split(',')]
-                
-                # Count genre combinations
-                combo_key = ','.join(sorted(genres))
-                genre_combos[combo_key] = genre_combos.get(combo_key, 0) + 1
-                
-                # Count individual genres
-                for genre in genres:
-                    genre_counts[genre] = genre_counts.get(genre, 0) + 1
+                    genres = [g.strip() for g in genres_str.split('|')]
+                    combo_key = ','.join(sorted(genres))
+                    genre_combos[combo_key] = genre_combos.get(combo_key, 0) + 1
                     
-                    # Track top movies per genre (only for rated movies)
-                    if tconst in ratings:
-                        r = ratings[tconst]
+                    for genre in genres:
+                        genre_counts[genre] = genre_counts.get(genre, 0) + 1
                         if genre not in movies_by_genre:
                             movies_by_genre[genre] = []
-                        movies_by_genre[genre].append((title, r['rating'], year))
+                        movies_by_genre[genre].append(
+                            (row['title'], row.get('vote_average', 0), 
+                             str(row.get('release_date', ''))[:4])
+                        )
                 
-                count += 1
+                top_movies = {}
+                for genre, movies in movies_by_genre.items():
+                    sorted_movies = sorted(movies, key=lambda x: x[1], reverse=True)[:20]
+                    top_movies[genre] = sorted_movies
+                
+                self.genre_counts = genre_counts
+                self.genre_combos = genre_combos
+                self.top_movies_by_genre = top_movies
+                self.is_loaded = True
+                
+                joblib.dump({
+                    'genre_counts': genre_counts,
+                    'genre_combos': genre_combos,
+                    'top_movies_by_genre': top_movies,
+                }, self.CACHE_PATH)
+                print(f"  Cached {len(genre_counts)} genres to {self.CACHE_PATH}")
+                return True
+        except Exception as e:
+            print(f"  TMDB fetch failed: {e}")
         
-        print(f"  Processed {count} movies, {len(genre_counts)} unique genres")
-        
-        # Keep only top 20 movies per genre (sorted by rating)
-        top_movies = {}
-        for genre, movies in movies_by_genre.items():
-            sorted_movies = sorted(movies, key=lambda x: x[1], reverse=True)[:20]
-            top_movies[genre] = sorted_movies
-        
-        self.genre_counts = genre_counts
-        self.genre_combos = genre_combos
-        self.top_movies_by_genre = top_movies
+        # Built-in fallback genre data (no external files needed)
+        self.genre_counts = {
+            'Drama': 5000, 'Comedy': 3500, 'Thriller': 2800, 'Action': 2500,
+            'Romance': 2000, 'Crime': 1800, 'Adventure': 1500, 'Horror': 1400,
+            'Sci-Fi': 1200, 'Fantasy': 1000, 'Mystery': 900, 'Family': 800,
+            'Animation': 700, 'War': 600, 'Music': 500, 'History': 450,
+            'Western': 350, 'Documentary': 300,
+        }
+        self.genre_combos = {}
+        self.top_movies_by_genre = {}
         self.is_loaded = True
-        
-        # Cache for instant future loads
-        joblib.dump({
-            'genre_counts': genre_counts,
-            'genre_combos': genre_combos,
-            'top_movies_by_genre': top_movies,
-        }, self.CACHE_PATH)
-        
-        print(f"  Cached to {self.CACHE_PATH}")
+        print("  Using built-in fallback genre data")
         return True
     
     def get_genre_distribution(self) -> dict:

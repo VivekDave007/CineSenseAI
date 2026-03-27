@@ -33,19 +33,51 @@ class LocalEntertainmentAssistant:
         self._dl_churn = None
         self._eda_df = None
         
-        # Multi-API Provider Manager (replaces hardcoded NVIDIA calls)
+        # SSL Engine instances (lazy-loaded)
+        self._ssl_churn = None
+        self._ssl_sentiment = None
+        self._ssl_recommender = None
+        self._ssl_vision = None
+        
+        # Multi-API Provider Manager
         self.api_manager = APIProviderManager()
         
         self.project_keywords = {
             "project", "viva", "submission", "churn", "recommender", "recommendation",
             "sentiment", "eda", "netflix", "imdb", "movielens", "wikipedia",
             "streamlit", "dashboard", "entertainment", "media", "model", "deep learning",
-            "neural network", "vision", "cnn", "resnet", "image", "classification"
+            "neural network", "vision", "cnn", "resnet", "image", "classification",
+            "semi-supervised", "ssl", "label propagation", "self-training", "tmdb"
         }
 
         self.knowledge_titles, self.knowledge_docs = self._build_knowledge_base()
         self.vectorizer = TfidfVectorizer(stop_words="english")
         self.doc_matrix = self.vectorizer.fit_transform(self.knowledge_docs)
+
+    # --- SSL Lazy Loaders ---
+    def _load_ssl_churn(self):
+        if self._ssl_churn is None:
+            from models.ssl_engine import ChurnSSL
+            self._ssl_churn = ChurnSSL()
+        return self._ssl_churn
+
+    def _load_ssl_sentiment(self):
+        if self._ssl_sentiment is None:
+            from models.ssl_engine import SentimentSSL
+            self._ssl_sentiment = SentimentSSL()
+        return self._ssl_sentiment
+
+    def _load_ssl_recommender(self):
+        if self._ssl_recommender is None:
+            from models.ssl_engine import RecommenderSSL
+            self._ssl_recommender = RecommenderSSL()
+        return self._ssl_recommender
+
+    def _load_ssl_vision(self):
+        if self._ssl_vision is None:
+            from models.ssl_engine import VisionSSL
+            self._ssl_vision = VisionSSL()
+        return self._ssl_vision
 
     def _reply(
         self,
@@ -165,18 +197,14 @@ class LocalEntertainmentAssistant:
         
         bullets = [f"{label}: {prob:.1f}%" for label, prob in results[1:5]]
         
-        # --- RL Vision Agent Injection ---
-        rl_injection = ""
+        # --- SSL Vision Analysis ---
+        ssl_injection = ""
         try:
-            from models.rl_engine import VisionRLAgent
-            rl_vision = VisionRLAgent()
-            is_dog = 'dog' in predicted_genre.lower() or 'family' in predicted_genre.lower()
-            action, boost, mode = rl_vision.prescribe(top_prob, len(results), is_dog)
-            rl_injection = f"**RL Vision Agent ({mode})**: {action}"
-            if boost > 0:
-                rl_injection += f"\n*Expected Engagement Boost: +{boost:.1f}%*"
+            ssl_vision = self._load_ssl_vision()
+            ssl_vision.analyze_predictions(results)
+            ssl_injection = ssl_vision.get_vision_ssl_insight(top_prob, predicted_genre)
         except Exception as e:
-            rl_injection = f"*(RL Vision Agent Error: {e})*"
+            ssl_injection = f"*(SSL Vision Analysis Error: {e})*"
             
         # --- Multi-API Enhanced Vision Text ---
         preferred = getattr(self, '_preferred_api', 'auto')
@@ -190,11 +218,11 @@ class LocalEntertainmentAssistant:
             
             llm_reply, provider = self.api_manager.get_completion(prompt, preferred=preferred, system_prompt=system_prompt)
             if llm_reply:
-                final_text = f"*(Powered by {provider})*\n\n{llm_reply}\n\n---\n{rl_injection}"
+                final_text = f"*(Powered by {provider})*\n\n{llm_reply}\n\n---\n{ssl_injection}"
                 return self._reply(final_text, tool="dl-vision+llm", bullets=bullets, chart=heatmap)
         
         # Fallback
-        text = f"I've analyzed the image locally. It looks like a **{top_label}**.\n\nThis maps to the **{predicted_genre}** genre.\n\n---\n{rl_injection}"
+        text = f"I've analyzed the image locally. It looks like a **{top_label}**.\n\nThis maps to the **{predicted_genre}** genre.\n\n---\n{ssl_injection}"
         return self._reply(text, tool="dl-vision", bullets=bullets, chart=heatmap)
 
     def _sentiment_reply(self, message: str, use_dl: bool = False) -> dict[str, Any]:
@@ -228,19 +256,18 @@ class LocalEntertainmentAssistant:
             except Exception as e:
                 print(f"API Sentiment Enhancement Error: {e}")
         
-        # --- RL Sentiment Agent Injection ---
+        # --- SSL Sentiment Insights ---
         try:
-            from models.rl_engine import SentimentRLAgent
-            rl_sent = SentimentRLAgent()
-            sent_score = 1.0 if (use_dl and sentiment == "Positive") or (not use_dl and result.get('prediction') == 'Positive') else 0.0
-            conf_val = confidence if use_dl else result.get('confidence', 0.5) * 100
-            action, boost, mode = rl_sent.prescribe(sent_score, conf_val, len(review_text))
-            text += f"\n\n---\n**RL Sentiment Agent ({mode})**: {action}"
-            if boost > 0:
-                text += f"\n*Expected Engagement Boost: +{boost:.1f}%*"
-            tool = "sentiment-rl"
+            ssl_sent = self._load_ssl_sentiment()
+            sent_score = confidence if use_dl else result.get('confidence', 0.5) * 100
+            ssl_text = ssl_sent.get_sentiment_ssl_insight(
+                sentiment if use_dl else result.get('prediction', 'Unknown'),
+                sent_score
+            )
+            text += f"\n\n---\n{ssl_text}"
+            tool = "sentiment-ssl"
         except Exception as e:
-            text += f"\n\n*(RL Sentiment Agent Error: {e})*"
+            text += f"\n\n*(SSL Sentiment Analysis Error: {e})*"
             
         return self._reply(text, tool=tool)
 
@@ -274,7 +301,7 @@ class LocalEntertainmentAssistant:
                 answer, api_name = self.api_manager.get_completion(churn_prompt, preferred=preferred)
                 
                 if answer:
-                    # Extract numerical probability for the RL Bandit
+                    # Extract numerical probability
                     prop_match = re.search(r"(\d+(?:\.\d+)?)%", answer)
                     propensity = float(prop_match.group(1)) if prop_match else 50.0
                     
@@ -282,14 +309,12 @@ class LocalEntertainmentAssistant:
                     tool = "api-churn"
                     top_factors = [f"{api_name} Natural Language Analysis"]
                     
-                    # Go directly to RL Bandit injection
-                    return self._inject_rl_bandit_and_reply(text, tool, propensity, parsed, top_factors)
+                    return self._inject_ssl_insights_and_reply(text, tool, propensity, parsed, top_factors)
                 
             except Exception as e:
                 print(f"API Churn Error: {e}")
-                # Fallthrough to local models
 
-        # 2. Fallback to Local Models (Deep Learning or XGBoost)
+        # 2. Fallback to Local Models (Deep Learning or legacy)
         if use_dl:
             dl_churn = self._load_dl_churn()
             user_df = pd.DataFrame([{
@@ -336,28 +361,25 @@ class LocalEntertainmentAssistant:
                     propensity = 0
                     top_factors = []
                 
-            text = f"Local XGBoost Churn Model: **{propensity:.1f}%** churn probability."
+            text = f"Local Deep Tabular Churn Model: **{propensity:.1f}%** churn probability."
             tool = "churn"
 
-        return self._inject_rl_bandit_and_reply(text, tool, propensity, parsed, top_factors)
+        return self._inject_ssl_insights_and_reply(text, tool, propensity, parsed, top_factors)
 
-    def _inject_rl_bandit_and_reply(self, base_text: str, tool: str, propensity: float, parsed: dict, top_factors: list) -> dict[str, Any]:
-        """Helper to append RL instructions and format output."""
+    def _inject_ssl_insights_and_reply(self, base_text: str, tool: str, propensity: float, parsed: dict, top_factors: list) -> dict[str, Any]:
+        """Helper to append SSL insights and format output."""
         text = base_text
         risk_level = "High" if propensity > 60 else "Medium" if propensity > 35 else "Low"
         text += f"\nRisk Level: **{risk_level}**."
         
-        # --- Reinforcement Learning Bandit Injection ---
+        # --- Semi-Supervised Learning Churn Insights ---
         try:
-            from models.rl_engine import ChurnRLAgent
-            rl_churn = ChurnRLAgent()
-            action, boost, mode = rl_churn.prescribe(propensity, parsed)
-            text += f"\n\n---\n**RL Churn Agent ({mode})**: Prescribing offer -> **{action}**"
-            if boost > 0:
-                text += f"\n*Expected Retention Reward Boost: +{boost:.1f}%*"
-            tool = "churn-rl"
+            ssl_churn = self._load_ssl_churn()
+            ssl_text = ssl_churn.get_churn_ssl_insight(propensity, parsed)
+            text += f"\n\n---\n{ssl_text}"
+            tool = "churn-ssl"
         except Exception as e:
-            text += f"\n\n*(RL Evaluation Failed: {e})*"
+            text += f"\n\n*(SSL Analysis Error: {e})*"
             
         return self._reply(text, tool=tool, bullets=[f"Primary Factors: {', '.join(top_factors)}"])
 
@@ -377,12 +399,15 @@ class LocalEntertainmentAssistant:
     def _summary_reply(self) -> dict[str, Any]:
         return self._reply(
             "This project is an entertainment-domain ML system that combines behavior analysis, "
-            "recommendation, sentiment analysis, and churn prediction in one app.",
+            "recommendation, sentiment analysis, and churn prediction in one app. "
+            "It uses Semi-Supervised Learning (Label Propagation & Self-Training) to leverage "
+            "unlabeled data across all modules, enhanced with TMDB API integration.",
             tool="project-summary",
             bullets=[
                 f"Churn accuracy: {self.metrics['churn_accuracy']:.2%}",
                 f"Sentiment accuracy: {self.metrics['sentiment_accuracy']:.2%}",
-                "Recommendation: SVD baseline on MovieLens 1M.",
+                "Recommendation: SVD baseline on MovieLens 1M + TMDB enrichment.",
+                "SSL: Label Propagation & Self-Training across all modules.",
             ],
         )
 
@@ -432,18 +457,13 @@ class LocalEntertainmentAssistant:
             top_movies = [f"{r['title']} ({r.get('genres', 'Unknown')})" for r in recs[:5]]
             local_context = "Local ML Model Recommendations based on older datasets:\n" + "\n".join(top_movies)
         
-        # --- RL Recommendation Agent Injection ---
-        rl_injection = ""
-        action = None
+        # --- SSL Recommender Insights ---
+        ssl_injection = ""
         try:
-            from models.rl_engine import RecommendationRLAgent
-            rl_rec = RecommendationRLAgent()
-            action, boost, mode = rl_rec.prescribe(count, genre, decade)
-            rl_injection = f"**RL Discovery Agent ({mode})**: {action}"
-            if boost > 0:
-                rl_injection += f"\n*Expected Discovery Satisfaction Boost: +{boost:.1f}%*"
+            ssl_rec = self._load_ssl_recommender()
+            ssl_injection = ssl_rec.get_recommendation_ssl_insight(count, genre)
         except Exception as e:
-            rl_injection = f"*(RL Error: {e})*"
+            ssl_injection = f"*(SSL Error: {e})*"
             
         # 2. Ask the LLM to provide the final accurate response
         system_prompt = (
@@ -460,13 +480,13 @@ class LocalEntertainmentAssistant:
         )
         
         if llm_response:
-            final_text = f"*(Powered by {provider_name})*\n\n{llm_response}\n\n---\n{rl_injection}"
+            final_text = f"*(Powered by {provider_name})*\n\n{llm_response}\n\n---\n{ssl_injection}"
             return self._reply(final_text, tool="recommender+llm")
         else:
             # Fallback if no LLM
             table = pd.DataFrame(recs) if recs else None
             summary = "Local Recommender Fallback (APIs unavailable or failed)."
-            summary += f"\n\n---\n{rl_injection}"
+            summary += f"\n\n---\n{ssl_injection}"
             return self._reply(summary, tool="recommender-offline", table=table)
 
     def _eda_reply(self, message: str) -> dict[str, Any]:
@@ -519,11 +539,12 @@ class LocalEntertainmentAssistant:
         return self._reply(answer, tool=tool_used, bullets=bullets)
 
     def _build_knowledge_base(self) -> tuple[list[str], list[str]]:
-        titles = ["Project Scope", "Tech Stack", "Objectives"]
+        titles = ["Project Scope", "Tech Stack", "Objectives", "SSL Architecture"]
         docs = [
-            "This project analyzes media datasets.",
-            "Built with Streamlit, Keras, and Scikit-Learn.",
-            "EDA, Recommendations, Sentiment, and Churn prediction."
+            "This project analyzes media datasets using semi-supervised learning.",
+            "Built with Streamlit, Keras, Scikit-Learn, and TMDB API.",
+            "EDA, Recommendations, Sentiment, and Churn prediction with SSL.",
+            "Uses Label Propagation and Self-Training for semi-supervised learning across all modules."
         ]
         return titles, docs
 
