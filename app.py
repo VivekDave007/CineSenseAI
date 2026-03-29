@@ -65,12 +65,12 @@ def main():
     if "messages" not in st.session_state:
         st.session_state.messages = [{
             "role": "assistant",
-            "text": "Hello! I am **CineSense AI**. I can help you with movie recommendations, sentiment analysis, churn prediction, and more using local datasets and Deep Learning models.",
+            "text": "Hello! I am **CineSense AI**. I can help you with movie recommendations, sentiment analysis, churn prediction, and image understanding using Gemini 2.5 Flash with local ML fallbacks.",
             "bullets": [
                 "Recommend 5 sci-fi movies from the 1990s",
                 "Deep NLP: This movie was absolutely brilliant!",
                 "Predict churn for age 25, Standard sub, TV, $15 fee, 30 hours watch time, 5 days login",
-                "Show me a chart of churn by region"
+                "Upload a poster for Gemini-powered vision analysis"
             ]
         }]
 
@@ -92,13 +92,15 @@ def main():
         st.subheader("API Provider")
         api_options = {
             "auto": "Auto (Best Available)",
+            "gemini": "Gemini 2.5 Flash",
             "gemma": "Gemma 3n (gemma-3n-e4b-it)",
             "gemma27b": "Gemma 27B (gemma-3-27b-it)",
             "phi4": "Phi-4 (phi-4-mini-instruct)",
+            "local": "Local Only",
         }
         available_apis = assistant.api_manager.list_available()
         api_status = []
-        for key_name, display_name in [("gemma", "Gemma 3n"), ("gemma27b", "Gemma 27B"), ("phi4", "Phi-4")]:
+        for key_name, display_name in [("gemini", "Gemini 2.5 Flash"), ("gemma", "Gemma 3n"), ("gemma27b", "Gemma 27B"), ("phi4", "Phi-4")]:
             status_icon = "[+]" if key_name in available_apis else "[-]"
             api_status.append(f"{status_icon} {display_name}")
         st.caption(f"Keys: {' | '.join(api_status)}")
@@ -125,7 +127,7 @@ def main():
             st.session_state.messages = st.session_state.messages[:1]
             st.rerun()
 
-        st.caption("v4.0.0 | Multi-API + SSL + TMDB Engine")
+        st.caption("v4.1.0 | Gemini Vision + Multi-API + SSL + TMDB Engine")
 
     # Main Header
     st.markdown('<div class="hero-container"><h1>CineSense AI</h1></div>', unsafe_allow_html=True)
@@ -140,7 +142,7 @@ def main():
     st.markdown("---")
     
     with st.expander("Upload Image for Vision Classification", expanded=False):
-        uploaded_image = st.file_uploader("Upload a movie poster or object...", type=["jpg", "png", "jpeg"])
+        uploaded_image = st.file_uploader("Upload a movie poster or object for Gemini 2.5 Flash analysis...", type=["jpg", "png", "jpeg"])
         if uploaded_image and st.button("Analyze Uploaded Image"):
             submit_prompt("Analyzing uploaded image...", image_file=uploaded_image)
             st.rerun()

@@ -1,255 +1,196 @@
-# CineSense AI & Entertainment ML Hub
+# CineSense AI
 
-🔥 **Live Interactive Application:** [cinesenseai.streamlit.app](https://cinesenseai.streamlit.app/)
+CineSense AI is a Streamlit-based entertainment ML assistant that combines:
 
-Welcome to the **CineSense AI Repository**, a complete overhaul of the classic Machine Learning dashboard into a unified, **Premium AI Assistant Chat Interface**. This project tackles the core challenges of the modern digital media landscape by exposing deep learning models through a single conversational entry point.
+- movie recommendation
+- IMDb review sentiment analysis
+- Netflix-style churn prediction
+- image and poster understanding
+- lightweight project Q&A
 
-## 🤖 The CineSense AI Chat Experience
+The app brings those workflows into a single chat UI, with local ML models and external LLM providers working together when available.
 
-Unlike traditional tabbed dashboards, CineSense AI provides a full-screen, responsive chat experience designed with premium aesthetics (Glassmorphism, Vibrant Gradients, modern 'Outfit' typography). You simply *talk* to the AI to trigger complex machine learning pipelines.
+## What It Does
 
-### Capabilities Exposed via Chat:
+### 1. Vision and Poster Analysis
 
-1. **User Behavior EDA**: Ask the AI for "charts" to analyze the Netflix Customer Churn dataset using interactive Plotly demographics right inside the chat window.
-2. **Filter-Based Discovery + SVD Baseline**: Ask the AI for movie recommendations (e.g., "Recommend 5 sci-fi movies"). It seamlessly processes your request through a global Matrix Factorization (TruncatedSVD) baseline on the MovieLens 1M dataset, enriched with TMDB API data.
-3. **Deep Sentiment Analysis**: Paste an IMDb review and ask for a "deep neural" analysis. The assistant routes the text through a **Deep Keras Neural Network** (Embedding + Dense layers), evaluating sentiment locally with **83.8% Accuracy**. Semi-Supervised Learning provides confidence insights via Label Propagation.
-4. **Predictive Analytics (Churn)**: Send a subscriber profile (e.g., "Predict churn for age 25, Standard sub..."). The AI triggers a **Deep Keras Multi-Layer Perceptron** trained on Netflix telemetry to instantly predict cancellation probability (scoring **91.3% Accuracy** and **97.7% ROC-AUC**). Self-Training SSL augments predictions with pseudo-label analysis.
-5. **Multi-Modal Hub (Vision)**: Upload a movie poster to the chat window! The AI uses an embedded ResNet50 model to classify visual features and map them to genres. SSL pseudo-labeling provides confidence-based insights powered by the PosterCraft/Poster100K dataset.
-6. **Multi-API LLM Backbone**: CineSense AI supports **multiple LLM APIs** simultaneously — **NVIDIA Gemma** and **Phi-4**. A sidebar selector lets you choose your preferred provider (Auto, Gemma, Phi-4, or Local Only), with automatic fallback if one API is unavailable.
+- Upload an image or movie poster from the Streamlit UI.
+- **Gemini 2.5 Flash** is now the primary multimodal image-analysis path.
+- If Gemini is unavailable, the app falls back to the local **ResNet50** vision pipeline in [models/dl_vision.py](models/dl_vision.py).
+- When the local path is used, the app can still summarize the result with the selected text provider.
 
-## 🧠 Semi-Supervised Learning (SSL) Architecture
+### 2. Sentiment Analysis
 
-CineSense AI applies SSL across **all four ML modules**, replacing traditional RL approaches with principled semi-supervised techniques:
+- Local classical sentiment analysis for IMDb-style reviews
+- Deep-learning sentiment analysis with the Keras pipeline
+- Optional LLM second-opinion response when an API provider is available
 
-| Module | SSL Method | Purpose |
-|---|---|---|
-| **Churn** | Self-Training (RandomForest) | Leverages unlabeled user profiles to expand training data |
-| **Sentiment** | Label Propagation (RBF Kernel) | Propagates sentiment labels through TF-IDF embedding space |
-| **Recommender** | Self-Training (SVD Pseudo-Labels) | Identifies high-confidence implicit preferences for discovery |
-| **Vision** | Pseudo-Labeling (Confidence Thresholding) | Expands poster classification with PosterCraft dataset |
+### 3. Churn Prediction
 
-## 🏗️ Architecture Diagram
+- Structured churn prediction for Netflix-style subscriber inputs
+- Local deep-learning fallback
+- Optional provider-generated reasoning and SSL insight text
 
-```mermaid
-graph TD
-    %% Custom Styling
-    classDef data fill:#2C3E50,stroke:#34495E,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef model fill:#8E44AD,stroke:#9B59B6,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef llm fill:#D35400,stroke:#E67E22,stroke-width:2px,color:#fff,rx:15px,ry:15px;
-    classDef ui fill:#27AE60,stroke:#2ECC71,stroke-width:2px,color:#fff,rx:15px,ry:15px;
-    classDef ssl fill:#2980B9,stroke:#3498DB,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+### 4. Movie Recommendation
 
-    %% Define Sources
-    subgraph Data Sources
-        DS1[("Netflix Telemetry CSV")]:::data
-        DS2[("IMDb Reviews CSV")]:::data
-        DS3[("MovieLens 1M CSV")]:::data
-        DS4[("TMDB API")]:::data
-        DS5[("PosterCraft/Poster100K")]:::data
-        DS6[("IMDb-Face")]:::data
-    end
+- Filtered recommendations using the local recommender
+- Optional provider-enhanced response formatting and broader suggestions
 
-    %% Define ML Backend Models
-    subgraph Machine Learning Backend
-        ML1["Deep Tabular Churn Model<br><i>(Keras MLP + Batch Norm)</i>"]:::model
-        ML2["Deep NLP Sentiment Model<br><i>(Keras Embedding + Dense)</i>"]:::model
-        ML3["Collaborative Recommender<br><i>(TruncatedSVD Matrix Factorization)</i>"]:::model
-        ML4["ResNet50 Vision Classifier"]:::model
-    end
+### 5. EDA and Project Support
 
-    %% Connect Sources to Models
-    DS1 -->|"Train/Pre-Process"| ML1
-    DS2 -->|"Train/Pre-Process"| ML2
-    DS3 -->|"Train/Pre-Process"| ML3
-    DS4 -->|"Enrich"| ML3
+- Churn charts inside the app
+- Project summary / viva-style helper responses
+- Small project knowledge base fallback
 
-    %% Define SSL Layer
-    subgraph SSL Engine
-        SSL1["Self-Training<br>(Churn)"]:::ssl
-        SSL2["Label Propagation<br>(Sentiment)"]:::ssl
-        SSL3["Pseudo-Labels<br>(Recommender)"]:::ssl
-        SSL4["Confidence Thresholding<br>(Vision)"]:::ssl
-    end
+## Current Provider Setup
 
-    %% Connect Models to SSL
-    ML1 -.-> SSL1
-    ML2 -.-> SSL2
-    ML3 -.-> SSL3
-    ML4 -.-> SSL4
-    DS5 -.-> SSL4
-    DS6 -.-> ML4
+The app supports these provider modes from the sidebar:
 
-    %% Define External Fallbacks
-    subgraph External LLM APIs
-        LLM1{"Gemma 3n & 27B"}:::llm
-        LLM2{"Phi-4"}:::llm
-    end
+- `Auto`
+- `Gemini 2.5 Flash`
+- `Gemma 3n`
+- `Gemma 27B`
+- `Phi-4`
+- `Local Only`
 
-    %% Define Streamlit Frontend
-    subgraph Streamlit UI
-        UI1{"CineSense AI Chat Interface"}:::ui
-    end
+### Provider Behavior
 
-    %% Connect to UI
-    ML3 -.->|"Local Context"| UI1
-    ML2 -.->|"Sentiment Scores"| UI1
-    ML1 -.->|"Churn Retention Propensity"| UI1
-    ML4 -.->|"Visual Classes"| UI1
-    
-    UI1 ==>|"Augmented LLM Generation"| LLM1
-    UI1 ==>|"Augmented LLM Generation"| LLM2
-    
-    SSL1 -->|"SSL Insights"| UI1
-    SSL2 -->|"SSL Insights"| UI1
-    SSL3 -->|"SSL Insights"| UI1
-    SSL4 -->|"SSL Insights"| UI1
-```
+- For uploaded image analysis, `Auto` prefers **Gemini 2.5 Flash**.
+- Choosing `Gemini 2.5 Flash` forces the Gemini multimodal route for images.
+- Choosing `Local Only` skips external providers.
+- Choosing `Gemma`, `Gemma 27B`, or `Phi-4` keeps image classification local and uses the chosen provider for text-style enhancement where applicable.
 
-## 📸 Dashboard Output Screenshots
+## Architecture Summary
 
-To provide a visual sense of the final Streamlit machine learning application suite:
+### Frontend
 
-### 1. Main Dashboard & Data Viz Hub
-![Main Dashboard Overview](media/dashboard_overview.png)
-<br>
+- Streamlit chat interface in [app.py](app.py)
 
+### Routing Layer
 
-### 2. Application Interface
-![Additional Dashboard Views](media/main_dashboard.png)
+- Main assistant orchestration in [models/chat_assistant.py](models/chat_assistant.py)
 
-## 📁 Project Structure
+### Model / API Layers
+
+- Vision pipeline: [models/dl_vision.py](models/dl_vision.py)
+- Provider manager: [models/api_provider.py](models/api_provider.py)
+- Sentiment pipeline: [models/dl_nlp.py](models/dl_nlp.py)
+- Churn pipeline: [models/dl_churn.py](models/dl_churn.py)
+- Recommender: [models/recommender.py](models/recommender.py)
+- SSL helpers: [models/ssl_engine.py](models/ssl_engine.py)
+
+## Project Structure
 
 ```text
-Entertainment_Media_ML_Hub/
-│
-├── .env                    # (Ignored) Secure repository for API Keys
-├── app.py                  # Main Streamlit Chat Application UI (Premium Interface)
-├── requirements.txt        # Python dependency list
-├── README.md               # Project documentation
-│
-├── data/                   # (Ignored in Git, download locally)
-│   ├── archive_2/          # Netflix Customer Churn Dataset
-│   ├── archive_3/          # IMDb 50K Sentiment Dataset (IMDB Dataset.csv)
-│   ├── archive_4/          # MovieLens 1M Dataset
-│   ├── archive (6)/        # Additional IMDB Dataset
-│   ├── tmdb_fetcher.py     # TMDB API data fetcher module
-│   ├── Poster100K/         # HuggingFace PosterCraft poster dataset (cloned)
-│   └── IMDb-Face/          # IMDb Face detection dataset (cloned)
-│
-├── models/                 # Machine Learning & Deep Learning Backend
-│   ├── chat_assistant.py   # State machine routing chat prompts to correct ML models
-│   ├── ssl_engine.py       # Semi-Supervised Learning Engine (Label Prop + Self-Training)
-│   ├── churn.py            # Deep Tabular Neural Network (Churn Pipeline)
-│   ├── dl_churn.py         # Keras Dense Neural Network (Tabular Churn Pipeline)
-│   ├── dl_nlp.py           # Deep NLP Sentiment Pipeline (UI Interface Layer)
-│   ├── dl_vision.py        # ResNet50 Vision-to-Genre Pipeline
-│   ├── nlp.py              # Deep Sentiment Analyzer
-│   ├── recommender.py      # TruncatedSVD Matrix Factorization Model
-│   ├── imdb_genre.py       # IMDb Genre Database for Vision Classification
-│   ├── api_provider.py     # Multi-API LLM Provider Manager
-│   ├── *.keras             # Pre-trained Deep Neural Network Weights
-│   └── *.pkl               # Pre-trained Preprocessing Artifacts
-│    
-└── scripts/                # Offline Execution Scripts
-    ├── train_models.py     # Trains Deep Learning models + SSL pre-computation
-    └── evaluate_models.py  # Formal evaluation pipeline (Accuracy, F1, ROC-AUC, SSL)
+CineSenseAI/
+|
+|-- app.py
+|-- README.md
+|-- requirements.txt
+|-- .env                         # local only, ignored by git
+|-- data/
+|-- docs/
+|   `-- gemini_vision_setup.md
+|-- media/
+|-- models/
+|   |-- api_provider.py
+|   |-- chat_assistant.py
+|   |-- churn.py
+|   |-- dl_churn.py
+|   |-- dl_nlp.py
+|   |-- dl_vision.py
+|   |-- imdb_genre.py
+|   |-- nlp.py
+|   |-- recommender.py
+|   `-- ssl_engine.py
+`-- scripts/
 ```
 
-## 🚀 How to Run the Application Locally
+## Datasets
 
-1. **Clone the Repository**:
-   ```bash
-   git clone <your-repository-url>
-   cd Entertainment_Media_ML_Hub
-   ```
+This project references or uses data from:
 
-2. **Download the Datasets**:
-   - Download the required Kaggle datasets and extract them directly into the `data/` folder structure:
-     - [Netflix Churn Dataset](https://www.kaggle.com/datasets/abdulwadood11220/netflix-customer-churn-dataset) -> `data/archive_2/`
-     - [IMDb 50K Dataset](https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews) -> `data/archive_3/`
-     - [MovieLens 1M Dataset](https://www.kaggle.com/datasets/odedgolden/movielens-1m-dataset) -> `data/archive_4/`
-   - Clone external datasets:
-     ```bash
-     cd data
-     git clone https://huggingface.co/datasets/PosterCraft/Poster100K
-     git clone https://github.com/fwang91/IMDb-Face.git
-     cd ..
-     ```
+- Netflix customer churn data
+- IMDb review data
+- MovieLens 1M
+- TMDB enrichment data
+- PosterCraft / Poster100K
+- IMDb-Face
 
-3. **Configure API Keys (Optional)**:
-   - Create a `.env` file in the root directory.
-   - Insert your API keys to enable LLM-powered features:
-     ```env
-     # Shared NVIDIA Endpoint
-     NVIDIA_API_BASE_URL="https://integrate.api.nvidia.com/v1"
+Large datasets are intentionally not committed to git.
 
-     # Gemma 3n (raw requests, streaming)
-     GEMMA_API_KEY="your_gemma_key_here"
-     GEMMA_MODEL="google/gemma-3n-e4b-it"
+## Local Setup
 
-     # Gemma 27B (raw requests, streaming)
-     GEMMA27B_API_KEY="your_gemma_key_here"
-     GEMMA27B_MODEL="google/gemma-3-27b-it"
+### 1. Create and activate a virtual environment
 
-     # Phi-4 (OpenAI client -> NVIDIA)
-     PHI4_API_KEY="your_phi4_key_here"
-     PHI4_MODEL="microsoft/phi-4-mini-instruct"
-     ```
-   - TMDB API key is embedded in `data/tmdb_fetcher.py`.
+```powershell
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-4. **Install Dependencies**:
-   It is recommended to use a virtual environment.
-   ```bash
-   python -m venv venv
-   # On Windows:
-   .\venv\Scripts\activate
-   # On Mac/Linux:
-   source venv/bin/activate
-   
-   pip install -r requirements.txt
-   ```
+### 2. Configure `.env`
 
-5. **Pre-Train the Deep Learning Models (Crucial Step)**:
-   This process trains the Keras Neural Networks on the datasets and serializes the optimized weights to `.keras` files for instant inference in the dashboard. *(Skip if weights are already pre-computed)*.
-   ```bash
-   cd scripts
-   python train_models.py
-   cd ..
-   ```
+The app can run with local-only features, but API-powered workflows need keys.
 
-6. **Launch the CineSense AI Dashboard**:
-   ```bash
-   streamlit run app.py
-   ```
-   Open your browser and navigate to `http://localhost:8501`. Because of step 5, the dashboard operations will now be lightning fast (sub-0.1 second inference).
+Example:
 
-## 📊 Evaluation Results
+```env
+# Shared NVIDIA Endpoint
+NVIDIA_API_BASE_URL="https://integrate.api.nvidia.com/v1"
 
-Run `python scripts/evaluate_models.py` to reproduce these numbers.
+# Gemini 2.5 Flash
+GEMINI_API_KEY="your_gemini_key_here"
+GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com/v1beta"
 
-| Module | Architecture | Metric | Score |
-|---|---|---|---|
-| Churn | Keras Dense Neural Network (MLP) | Accuracy | 0.9130 |
-| Churn | Keras Dense Neural Network (MLP) | Precision | 0.9280 |
-| Churn | Keras Dense Neural Network (MLP) | Recall | 0.8966 |
-| Churn | Keras Dense Neural Network (MLP) | F1 Score | 0.9120 |
-| Churn | Keras Dense Neural Network (MLP) | ROC-AUC | 0.9771 |
-| Sentiment | Keras Embedding + Dense Network | Accuracy | 0.8387 |
-| Sentiment | Keras Embedding + Dense Network | F1 Score | 0.8340 |
-| Recommender | TruncatedSVD (Matrix Factorization) | HitRate@10 | 0.0202 |
-| Recommender | TruncatedSVD (Matrix Factorization) | NDCG@10 | 0.0082 |
-| **Churn SSL** | **Self-Training (RandomForest)** | **Pseudo-Label Confidence** | **~0.95** |
-| **Sentiment SSL** | **Label Propagation (RBF)** | **Propagation Accuracy** | **~0.85** |
+# Gemma 3n
+GEMMA_API_KEY="your_gemma_key_here"
+GEMMA_MODEL="google/gemma-3n-e4b-it"
 
-## 🛠️ Technology Stack
+# Gemma 27B
+GEMMA27B_API_KEY="your_gemma_key_here"
+GEMMA27B_MODEL="google/gemma-3-27b-it"
 
-| Category | Technologies |
-|---|---|
-| **Deep Learning Base** | TensorFlow, Keras (Sequential, Dense, Embedding, BatchNormalization) |
-| **Classical ML** | Scikit-Learn (TF-IDF, SVD, StandardScaler, LabelEncoder) |
-| **Semi-Supervised Learning** | Label Propagation (RBF Kernel), Self-Training Classifier, Pseudo-Labeling |
-| **NLP & Vision** | Keras Tokenizer, pad_sequences, ResNet50 |
-| **LLM APIs** | Gemma (raw requests), Phi-4 (OpenAI client to NVIDIA), `python-dotenv` |
-| **External Data** | TMDB API, PosterCraft/Poster100K, IMDb-Face |
-| **Dashboard UI** | Streamlit, Plotly (Custom Theming, Config TOML) |
-| **Serialization** | Keras `.keras` format, Joblib `.pkl` format |
+# Phi-4
+PHI4_API_KEY="your_phi4_key_here"
+PHI4_MODEL="microsoft/phi-4-mini-instruct"
+```
+
+Extra Gemini notes are in [docs/gemini_vision_setup.md](docs/gemini_vision_setup.md).
+
+### 3. Launch the app
+
+```powershell
+.\venv\Scripts\python.exe -m streamlit run app.py
+```
+
+Then open `http://127.0.0.1:8501`.
+
+## Vision Flow
+
+The uploaded-image flow now works like this:
+
+1. User uploads an image from the Streamlit UI.
+2. [models/chat_assistant.py](models/chat_assistant.py) routes the image request.
+3. If Gemini is selected or `Auto` is active, the app sends the image to Gemini 2.5 Flash through the Google Generative Language API.
+4. If Gemini is not available or fails, the app falls back to the local ResNet50 classifier.
+5. The response is rendered back into the chat interface.
+
+## Verification
+
+The current local integration was verified by:
+
+- Python syntax compilation for the touched files
+- direct Gemini multimodal smoke test against a local image
+- end-to-end assistant routing test returning the `gemini-vision` tool path
+- local Streamlit launch validation on port `8501`
+
+## Notes
+
+- `.env` is ignored and should not be committed.
+- The repo currently includes local code changes for Gemini integration in:
+  - [app.py](app.py)
+  - [models/api_provider.py](models/api_provider.py)
+  - [models/chat_assistant.py](models/chat_assistant.py)
+  - [docs/gemini_vision_setup.md](docs/gemini_vision_setup.md)
