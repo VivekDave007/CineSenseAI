@@ -14,8 +14,8 @@ Unlike traditional tabbed dashboards, CineSense AI provides a full-screen, respo
 2. **Filter-Based Discovery + SVD Baseline**: Ask the AI for movie recommendations (e.g., "Recommend 5 sci-fi movies"). It seamlessly processes your request through a global Matrix Factorization (TruncatedSVD) baseline on the MovieLens 1M dataset, enriched with TMDB API data.
 3. **Deep Sentiment Analysis**: Paste an IMDb review and ask for a "deep neural" analysis. The assistant routes the text through a **Deep Keras Neural Network** (Embedding + Dense layers), evaluating sentiment locally with **83.8% Accuracy**. Semi-Supervised Learning provides confidence insights via Label Propagation.
 4. **Predictive Analytics (Churn)**: Send a subscriber profile (e.g., "Predict churn for age 25, Standard sub..."). The AI triggers a **Deep Keras Multi-Layer Perceptron** trained on Netflix telemetry to instantly predict cancellation probability (scoring **91.3% Accuracy** and **97.7% ROC-AUC**). Self-Training SSL augments predictions with pseudo-label analysis.
-5. **Multi-Modal Hub (Vision)**: Upload a movie poster to the chat window! The AI uses an embedded ResNet50 model to classify visual features and map them to genres. SSL pseudo-labeling provides confidence-based insights powered by the PosterCraft/Poster100K dataset.
-6. **Multi-API LLM Backbone**: CineSense AI supports **multiple LLM APIs** simultaneously — **NVIDIA Gemma** and **Phi-4**. A sidebar selector lets you choose your preferred provider (Auto, Gemma, Phi-4, or Local Only), with automatic fallback if one API is unavailable.
+5. **Multi-Modal Hub (Vision)**: Upload a movie poster to the chat window! The AI now uses **Gemini 2.5 Flash** for primary image understanding and falls back to an embedded **ResNet50** model to classify visual features and map them to genres. SSL pseudo-labeling provides confidence-based insights powered by the PosterCraft/Poster100K dataset.
+6. **Multi-API LLM Backbone**: CineSense AI supports **multiple LLM APIs** simultaneously — **Gemini 2.5 Flash**, **NVIDIA Gemma**, and **Phi-4**. A sidebar selector lets you choose your preferred provider (Auto, Gemini, Gemma, Phi-4, or Local Only), with automatic fallback if one API is unavailable.
 
 ## 🧠 Semi-Supervised Learning (SSL) Architecture
 
@@ -81,8 +81,9 @@ graph TD
 
     %% Define External Fallbacks
     subgraph External LLM APIs
-        LLM1{"Gemma 3n & 27B"}:::llm
-        LLM2{"Phi-4"}:::llm
+        LLM1{"Gemini 2.5 Flash"}:::llm
+        LLM2{"Gemma 3n & 27B"}:::llm
+        LLM3{"Phi-4"}:::llm
     end
 
     %% Define Streamlit Frontend
@@ -98,6 +99,7 @@ graph TD
     
     UI1 ==>|"Augmented LLM Generation"| LLM1
     UI1 ==>|"Augmented LLM Generation"| LLM2
+    UI1 ==>|"Augmented LLM Generation"| LLM3
     
     SSL1 -->|"SSL Insights"| UI1
     SSL2 -->|"SSL Insights"| UI1
@@ -183,6 +185,11 @@ Entertainment_Media_ML_Hub/
      # Shared NVIDIA Endpoint
      NVIDIA_API_BASE_URL="https://integrate.api.nvidia.com/v1"
 
+     # Gemini 2.5 Flash (Google Generative Language API)
+     GEMINI_API_KEY="your_gemini_key_here"
+     GEMINI_MODEL="gemini-2.5-flash"
+     GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com/v1beta"
+
      # Gemma 3n (raw requests, streaming)
      GEMMA_API_KEY="your_gemma_key_here"
      GEMMA_MODEL="google/gemma-3n-e4b-it"
@@ -249,7 +256,7 @@ Run `python scripts/evaluate_models.py` to reproduce these numbers.
 | **Classical ML** | Scikit-Learn (TF-IDF, SVD, StandardScaler, LabelEncoder) |
 | **Semi-Supervised Learning** | Label Propagation (RBF Kernel), Self-Training Classifier, Pseudo-Labeling |
 | **NLP & Vision** | Keras Tokenizer, pad_sequences, ResNet50 |
-| **LLM APIs** | Gemma (raw requests), Phi-4 (OpenAI client to NVIDIA), `python-dotenv` |
+| **LLM APIs** | Gemini 2.5 Flash (Google Generative Language API), Gemma (raw requests), Phi-4 (OpenAI client to NVIDIA), `python-dotenv` |
 | **External Data** | TMDB API, PosterCraft/Poster100K, IMDb-Face |
 | **Dashboard UI** | Streamlit, Plotly (Custom Theming, Config TOML) |
 | **Serialization** | Keras `.keras` format, Joblib `.pkl` format |
