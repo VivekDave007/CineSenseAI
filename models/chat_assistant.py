@@ -1,6 +1,5 @@
 import os
 import re
-import requests
 import joblib
 import pandas as pd
 import plotly.express as px
@@ -185,6 +184,37 @@ class LocalEntertainmentAssistant:
         return self._eda_df
 
     def _vision_reply(self, image_file) -> dict[str, Any]:
+        preferred = getattr(self, "_preferred_api", "auto")
+
+        if preferred in {"auto", "gemini"}:
+            system_prompt = (
+                "You are CineSense AI's multimodal vision classifier. "
+                "Analyze only what is visible in the uploaded image. "
+                "Do not guess an exact movie title unless the poster text makes it obvious. "
+                "If it looks like a movie poster, infer likely genres from the artwork, text styling, color palette, and subjects."
+            )
+            prompt = (
+                "Analyze this uploaded image for the user in concise markdown.\n"
+                "Include:\n"
+                "1. A short `Primary subject` line.\n"
+                "2. A short `Likely genre(s)` line.\n"
+                "3. Two to four short bullet points describing the visual cues.\n"
+                "4. A final line starting with `Confidence note:`.\n"
+                "If the image is not a movie poster, say that clearly and give the closest entertainment-style genre vibe instead."
+            )
+
+            gemini_reply, provider = self.api_manager.analyze_image(
+                image_file,
+                preferred=preferred,
+                prompt=prompt,
+                system_prompt=system_prompt,
+            )
+            if gemini_reply:
+                return self._reply(
+                    f"*(Powered by {provider})*\n\n{gemini_reply}",
+                    tool="gemini-vision",
+                )
+
         vision = self._load_dl_vision()
         results, heatmap, predicted_genre = vision.predict_image(image_file)
         
@@ -387,7 +417,7 @@ class LocalEntertainmentAssistant:
         return self._reply(
             "I am **CineSense AI**, your Entertainment ML Assistant. I can perform local ML tasks and general chat.",
             bullets=[
-                "**Vision**: Upload an image to classify objects and map genres.",
+                "**Vision**: Upload an image to analyze with Gemini 2.5 Flash, with local ResNet50 fallback.",
                 "**Chat**: Ask about the project, ML concepts, or general topics.",
                 "**EDA**: Ask for 'charts' (age, device, sub, region, genre).",
                 "**Sentiment**: Paste a review (use 'deep' for neural analysis).",
