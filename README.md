@@ -166,6 +166,7 @@ Entertainment_Media_ML_Hub/
    ```
 
 2. **Download the Datasets**:
+   - Quick download for the required datasets: [Google Drive Folder](https://drive.google.com/drive/folders/11shUQ4e9cP8H7XXSvDCO1DIqBJ86s-Lc?usp=sharing)
    - Download the required Kaggle datasets and extract them directly into the `data/` folder structure:
      - [Netflix Churn Dataset](https://www.kaggle.com/datasets/abdulwadood11220/netflix-customer-churn-dataset) -> `data/archive_2/`
      - [IMDb 50K Dataset](https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews) -> `data/archive_3/`
