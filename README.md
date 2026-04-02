@@ -1,10 +1,14 @@
 # CineSense AI & Entertainment ML Hub
 
-🔥 **Live Interactive Application:** [cinesenseai.streamlit.app](https://cinesenseai.streamlit.app/)
+ðŸ”¥ **Live Interactive Application:** [cinesenseai.streamlit.app](https://cinesenseai.streamlit.app/)
+
+## Download the Datasets
+
+The datasets can be downloaded from [Google Drive](https://drive.google.com/drive/folders/11shUQ4e9cP8H7XXSvDCO1DIqBJ86s-Lc).
 
 Welcome to the **CineSense AI Repository**, a complete overhaul of the classic Machine Learning dashboard into a unified, **Premium AI Assistant Chat Interface**. This project tackles the core challenges of the modern digital media landscape by exposing deep learning models through a single conversational entry point.
 
-## 🤖 The CineSense AI Chat Experience
+## ðŸ¤– The CineSense AI Chat Experience
 
 Unlike traditional tabbed dashboards, CineSense AI provides a full-screen, responsive chat experience designed with premium aesthetics (Glassmorphism, Vibrant Gradients, modern 'Outfit' typography). You simply *talk* to the AI to trigger complex machine learning pipelines.
 
@@ -15,9 +19,9 @@ Unlike traditional tabbed dashboards, CineSense AI provides a full-screen, respo
 3. **Deep Sentiment Analysis**: Paste an IMDb review and ask for a "deep neural" analysis. The assistant routes the text through a **Deep Keras Neural Network** (Embedding + Dense layers), evaluating sentiment locally with **83.8% Accuracy**. Semi-Supervised Learning provides confidence insights via Label Propagation.
 4. **Predictive Analytics (Churn)**: Send a subscriber profile (e.g., "Predict churn for age 25, Standard sub..."). The AI triggers a **Deep Keras Multi-Layer Perceptron** trained on Netflix telemetry to instantly predict cancellation probability (scoring **91.3% Accuracy** and **97.7% ROC-AUC**). Self-Training SSL augments predictions with pseudo-label analysis.
 5. **Multi-Modal Hub (Vision)**: Upload a movie poster to the chat window! The AI now uses **Gemini 2.5 Flash** for primary image understanding and falls back to an embedded **ResNet50** model to classify visual features and map them to genres. SSL pseudo-labeling provides confidence-based insights powered by the PosterCraft/Poster100K dataset.
-6. **Multi-API LLM Backbone**: CineSense AI supports **multiple LLM APIs** simultaneously — **Gemini 2.5 Flash**, **NVIDIA Gemma**, and **Phi-4**. A sidebar selector lets you choose your preferred provider (Auto, Gemini, Gemma, Phi-4, or Local Only), with automatic fallback if one API is unavailable.
+6. **Multi-API LLM Backbone**: CineSense AI supports **multiple LLM APIs** simultaneously â€” **Gemini 2.5 Flash**, **NVIDIA Gemma**, and **Phi-4**. A sidebar selector lets you choose your preferred provider (Auto, Gemini, Gemma, Phi-4, or Local Only), with automatic fallback if one API is unavailable.
 
-## 🧠 Semi-Supervised Learning (SSL) Architecture
+## ðŸ§  Semi-Supervised Learning (SSL) Architecture
 
 CineSense AI applies SSL across **all four ML modules**, replacing traditional RL approaches with principled semi-supervised techniques:
 
@@ -28,7 +32,7 @@ CineSense AI applies SSL across **all four ML modules**, replacing traditional R
 | **Recommender** | Self-Training (SVD Pseudo-Labels) | Identifies high-confidence implicit preferences for discovery |
 | **Vision** | Pseudo-Labeling (Confidence Thresholding) | Expands poster classification with PosterCraft dataset |
 
-## 🏗️ Architecture Diagram
+## ðŸ—ï¸ Architecture Diagram
 
 ```mermaid
 graph TD
@@ -107,7 +111,7 @@ graph TD
     SSL4 -->|"SSL Insights"| UI1
 ```
 
-## 📸 Dashboard Output Screenshots
+## ðŸ“¸ Dashboard Output Screenshots
 
 To provide a visual sense of the final Streamlit machine learning application suite:
 
@@ -119,45 +123,45 @@ To provide a visual sense of the final Streamlit machine learning application su
 ### 2. Application Interface
 ![Additional Dashboard Views](media/main_dashboard.png)
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 ```text
 Entertainment_Media_ML_Hub/
-│
-├── .env                    # (Ignored) Secure repository for API Keys
-├── app.py                  # Main Streamlit Chat Application UI (Premium Interface)
-├── requirements.txt        # Python dependency list
-├── README.md               # Project documentation
-│
-├── data/                   # (Ignored in Git, download locally)
-│   ├── archive_2/          # Netflix Customer Churn Dataset
-│   ├── archive_3/          # IMDb 50K Sentiment Dataset (IMDB Dataset.csv)
-│   ├── archive_4/          # MovieLens 1M Dataset
-│   ├── archive (6)/        # Additional IMDB Dataset
-│   ├── tmdb_fetcher.py     # TMDB API data fetcher module
-│   ├── Poster100K/         # HuggingFace PosterCraft poster dataset (cloned)
-│   └── IMDb-Face/          # IMDb Face detection dataset (cloned)
-│
-├── models/                 # Machine Learning & Deep Learning Backend
-│   ├── chat_assistant.py   # State machine routing chat prompts to correct ML models
-│   ├── ssl_engine.py       # Semi-Supervised Learning Engine (Label Prop + Self-Training)
-│   ├── churn.py            # Deep Tabular Neural Network (Churn Pipeline)
-│   ├── dl_churn.py         # Keras Dense Neural Network (Tabular Churn Pipeline)
-│   ├── dl_nlp.py           # Deep NLP Sentiment Pipeline (UI Interface Layer)
-│   ├── dl_vision.py        # ResNet50 Vision-to-Genre Pipeline
-│   ├── nlp.py              # Deep Sentiment Analyzer
-│   ├── recommender.py      # TruncatedSVD Matrix Factorization Model
-│   ├── imdb_genre.py       # IMDb Genre Database for Vision Classification
-│   ├── api_provider.py     # Multi-API LLM Provider Manager
-│   ├── *.keras             # Pre-trained Deep Neural Network Weights
-│   └── *.pkl               # Pre-trained Preprocessing Artifacts
-│    
-└── scripts/                # Offline Execution Scripts
-    ├── train_models.py     # Trains Deep Learning models + SSL pre-computation
-    └── evaluate_models.py  # Formal evaluation pipeline (Accuracy, F1, ROC-AUC, SSL)
+â”‚
+â”œâ”€â”€ .env                    # (Ignored) Secure repository for API Keys
+â”œâ”€â”€ app.py                  # Main Streamlit Chat Application UI (Premium Interface)
+â”œâ”€â”€ requirements.txt        # Python dependency list
+â”œâ”€â”€ README.md               # Project documentation
+â”‚
+â”œâ”€â”€ data/                   # (Ignored in Git, download locally)
+â”‚   â”œâ”€â”€ archive_2/          # Netflix Customer Churn Dataset
+â”‚   â”œâ”€â”€ archive_3/          # IMDb 50K Sentiment Dataset (IMDB Dataset.csv)
+â”‚   â”œâ”€â”€ archive_4/          # MovieLens 1M Dataset
+â”‚   â”œâ”€â”€ archive (6)/        # Additional IMDB Dataset
+â”‚   â”œâ”€â”€ tmdb_fetcher.py     # TMDB API data fetcher module
+â”‚   â”œâ”€â”€ Poster100K/         # HuggingFace PosterCraft poster dataset (cloned)
+â”‚   â””â”€â”€ IMDb-Face/          # IMDb Face detection dataset (cloned)
+â”‚
+â”œâ”€â”€ models/                 # Machine Learning & Deep Learning Backend
+â”‚   â”œâ”€â”€ chat_assistant.py   # State machine routing chat prompts to correct ML models
+â”‚   â”œâ”€â”€ ssl_engine.py       # Semi-Supervised Learning Engine (Label Prop + Self-Training)
+â”‚   â”œâ”€â”€ churn.py            # Deep Tabular Neural Network (Churn Pipeline)
+â”‚   â”œâ”€â”€ dl_churn.py         # Keras Dense Neural Network (Tabular Churn Pipeline)
+â”‚   â”œâ”€â”€ dl_nlp.py           # Deep NLP Sentiment Pipeline (UI Interface Layer)
+â”‚   â”œâ”€â”€ dl_vision.py        # ResNet50 Vision-to-Genre Pipeline
+â”‚   â”œâ”€â”€ nlp.py              # Deep Sentiment Analyzer
+â”‚   â”œâ”€â”€ recommender.py      # TruncatedSVD Matrix Factorization Model
+â”‚   â”œâ”€â”€ imdb_genre.py       # IMDb Genre Database for Vision Classification
+â”‚   â”œâ”€â”€ api_provider.py     # Multi-API LLM Provider Manager
+â”‚   â”œâ”€â”€ *.keras             # Pre-trained Deep Neural Network Weights
+â”‚   â””â”€â”€ *.pkl               # Pre-trained Preprocessing Artifacts
+â”‚    
+â””â”€â”€ scripts/                # Offline Execution Scripts
+    â”œâ”€â”€ train_models.py     # Trains Deep Learning models + SSL pre-computation
+    â””â”€â”€ evaluate_models.py  # Formal evaluation pipeline (Accuracy, F1, ROC-AUC, SSL)
 ```
 
-## 🚀 How to Run the Application Locally
+## ðŸš€ How to Run the Application Locally
 
 1. **Clone the Repository**:
    ```bash
@@ -231,7 +235,7 @@ Entertainment_Media_ML_Hub/
    ```
    Open your browser and navigate to `http://localhost:8501`. Because of step 5, the dashboard operations will now be lightning fast (sub-0.1 second inference).
 
-## 📊 Evaluation Results
+## ðŸ“Š Evaluation Results
 
 Run `python scripts/evaluate_models.py` to reproduce these numbers.
 
@@ -249,7 +253,7 @@ Run `python scripts/evaluate_models.py` to reproduce these numbers.
 | **Churn SSL** | **Self-Training (RandomForest)** | **Pseudo-Label Confidence** | **~0.95** |
 | **Sentiment SSL** | **Label Propagation (RBF)** | **Propagation Accuracy** | **~0.85** |
 
-## 🛠️ Technology Stack
+## ðŸ› ï¸ Technology Stack
 
 | Category | Technologies |
 |---|---|
